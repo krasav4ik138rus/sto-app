@@ -37,7 +37,7 @@ import {
   type TestPushNotificationRequest,
   type TestPushNotificationResponse,
   type UnregisterPushTokenRequest,
-} from '@web-app-demo/contracts';
+} from '@autoservice-app/contracts';
 import type { z } from 'zod';
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');

@@ -1,4 +1,4 @@
-import type { RegisterPushTokenRequest } from '@web-app-demo/contracts';
+import type { RegisterPushTokenRequest } from '@autoservice-app/contracts';
 
 type PushRegistrationApi = {
   registerExpoPushToken: (input: RegisterPushTokenRequest) => Promise<unknown>;

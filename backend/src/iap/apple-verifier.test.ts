@@ -28,7 +28,7 @@ const baseEnv: AppEnv = {
 test('preserves App Store verifier configuration errors for missing root certificates', async () => {
   const verifier = createAppStoreSubscriptionVerifier({
     ...baseEnv,
-    APPLE_IAP_BUNDLE_ID: 'com.example.app',
+    APPLE_IAP_BUNDLE_ID: 'com.autoservice.app',
     APPLE_IAP_ROOT_CERTS_DIR: '/definitely/missing/apple/root-certs',
   })
 

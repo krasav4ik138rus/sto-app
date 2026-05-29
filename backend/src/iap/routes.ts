@@ -6,7 +6,7 @@ import {
   appStoreWebhookRequestSchema,
   iapEntitlementResponseSchema,
   iapMutationResponseSchema,
-} from '@web-app-demo/contracts'
+} from '@autoservice-app/contracts'
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi'
 import type { Context } from 'hono'
 

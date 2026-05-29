@@ -22,8 +22,8 @@ Android billing, Android code redemption, promotional offer purchase flows, alte
 
 Create two auto-renewable subscription products in one subscription group:
 
-- monthly SKU, for example `com.example.app.premium.monthly`
-- yearly SKU, for example `com.example.app.premium.yearly`
+- monthly SKU, for example `com.autoservice.app.premium.monthly`
+- yearly SKU, for example `com.autoservice.app.premium.yearly`
 
 The product IDs must match both backend and mobile env. In sandbox, products may take time to become queryable. Test on a real iOS device with a development build; Expo Go cannot load this native module.
 
@@ -34,14 +34,14 @@ Create sandbox testers in App Store Connect and sign into the sandbox account on
 Create an App Store Connect API key with access to App Store Server API, then configure backend env:
 
 ```bash
-APPLE_IAP_BUNDLE_ID=com.example.app
+APPLE_IAP_BUNDLE_ID=com.autoservice.app
 APPLE_IAP_APP_APPLE_ID=1234567890
 APPLE_IAP_ENVIRONMENT=Sandbox
 APPLE_IAP_ISSUER_ID=...
 APPLE_IAP_KEY_ID=...
 APPLE_IAP_PRIVATE_KEY_BASE64=...
 APPLE_IAP_ROOT_CERTS_DIR=/absolute/path/to/apple/root-certs
-APPLE_IAP_PRODUCT_IDS=com.example.app.premium.monthly,com.example.app.premium.yearly
+APPLE_IAP_PRODUCT_IDS=com.autoservice.app.premium.monthly,com.autoservice.app.premium.yearly
 ```
 
 `APPLE_IAP_PRIVATE_KEY_BASE64` is the contents of the `.p8` private key encoded as base64, or the PEM text itself for local experiments. Use base64 in shared deployment environments to avoid newline parsing mistakes.
@@ -56,8 +56,8 @@ Create `mobile/.env`:
 
 ```bash
 EXPO_PUBLIC_API_URL=http://localhost:3000
-EXPO_PUBLIC_IAP_IOS_MONTHLY_PRODUCT_ID=com.example.app.premium.monthly
-EXPO_PUBLIC_IAP_IOS_YEARLY_PRODUCT_ID=com.example.app.premium.yearly
+EXPO_PUBLIC_IAP_IOS_MONTHLY_PRODUCT_ID=com.autoservice.app.premium.monthly
+EXPO_PUBLIC_IAP_IOS_YEARLY_PRODUCT_ID=com.autoservice.app.premium.yearly
 ```
 
 `EXPO_PUBLIC_*` values are bundled into the app. Never put App Store API keys or private key material in mobile env.

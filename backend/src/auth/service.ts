@@ -5,7 +5,7 @@ import type {
   SocialAuthPayload,
   SocialAuthProvider,
   UserDto,
-} from '@web-app-demo/contracts'
+} from '@autoservice-app/contracts'
 
 import type { DbClient } from '../db'
 import type { AppEnv } from '../env'

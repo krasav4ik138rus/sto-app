@@ -38,11 +38,11 @@ try {
     rmSync(generatedPath, { recursive: true, force: true })
   }
 
-  const result = spawnSync('bun', ['run', 'prisma:generate:raw'], {
+  const result = spawnSync(process.execPath, ['../node_modules/prisma/build/index.js', 'generate'], {
     cwd: backendRoot,
     env: {
       ...process.env,
-      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:5432/web_app_demo?schema=public',
+      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:5432/autoservice_app?schema=public',
     },
     stdio: 'inherit',
   })

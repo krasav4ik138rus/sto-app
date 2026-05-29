@@ -30,20 +30,20 @@ if (googleIosUrlScheme) {
 
 module.exports = {
   expo: {
-    name: 'mobile',
-    slug: 'mobile',
+    name: 'Autoservice App',
+    slug: 'autoservice-app',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
-    scheme: 'mobile',
+    scheme: 'autoservice-app',
     userInterfaceStyle: 'automatic',
     ios: {
-      bundleIdentifier: 'com.webappdemo.mobile',
+      bundleIdentifier: 'com.autoservice.app',
       icon: './assets/expo.icon',
       usesAppleSignIn: true,
     },
     android: {
-      package: 'com.webappdemo.mobile',
+      package: 'com.autoservice.app',
       adaptiveIcon: {
         backgroundColor: '#E6F4FE',
         foregroundImage: './assets/images/android-icon-foreground.png',

@@ -6,7 +6,7 @@ import {
   type SocialAuthRequest,
   type SubscriptionSnapshot,
   type UserDto,
-} from '@web-app-demo/contracts';
+} from '@autoservice-app/contracts';
 import {
   createContext,
   type PropsWithChildren,

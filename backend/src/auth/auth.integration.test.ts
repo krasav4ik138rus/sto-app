@@ -291,7 +291,7 @@ maybeDescribe('auth API integration', () => {
 
     expect(register.status).toBe(201)
     expect(registerBody.refreshToken).toBeUndefined()
-    expect(setCookie).toContain('web_app_demo_refresh=')
+    expect(setCookie).toContain('autoservice_app_refresh=')
     expect(setCookie).toContain('HttpOnly')
     expect(setCookie).toContain('SameSite=Lax')
 
@@ -339,7 +339,7 @@ maybeDescribe('auth API integration', () => {
     expect(register.headers.get('access-control-allow-origin')).toBe('https://web.example.com')
     expect(register.headers.get('access-control-allow-credentials')).toBe('true')
     expect(registerBody.refreshToken).toBeUndefined()
-    expect(setCookie).toContain('web_app_demo_refresh=')
+    expect(setCookie).toContain('autoservice_app_refresh=')
     expect(setCookie).toContain('HttpOnly')
     expect(setCookie).toContain('Secure')
     expect(setCookie).toContain('SameSite=None')
@@ -600,7 +600,7 @@ maybeDescribe('auth API integration', () => {
     const socialApp = createApp({
       env: {
         ...env,
-        APPLE_AUTH_BUNDLE_ID: 'com.webappdemo.mobile',
+        APPLE_AUTH_BUNDLE_ID: 'com.autoservice.app',
       },
       prisma,
     })
@@ -651,7 +651,7 @@ maybeDescribe('auth API integration', () => {
     const socialApp = createApp({
       env: {
         ...env,
-        APPLE_AUTH_BUNDLE_ID: 'com.webappdemo.mobile',
+        APPLE_AUTH_BUNDLE_ID: 'com.autoservice.app',
       },
       prisma,
     })

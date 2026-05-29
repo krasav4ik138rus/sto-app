@@ -1,5 +1,5 @@
 {
-  "name": "@web-app-demo/website",
+  "name": "@autoservice-app/website",
   "private": true,
   "type": "module",
   "version": "0.0.0",
@@ -7,11 +7,11 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "typecheck": "astro check",
-    "preview": "astro preview",
-    "astro": "astro"
+    "dev": "bun ../node_modules/astro/bin/astro.mjs dev",
+    "build": "bun ../node_modules/astro/bin/astro.mjs build",
+    "typecheck": "bun ../node_modules/astro/bin/astro.mjs check",
+    "preview": "bun ../node_modules/astro/bin/astro.mjs preview",
+    "astro": "bun ../node_modules/astro/bin/astro.mjs"
   },
   "dependencies": {
     "astro": "^6.3.1"

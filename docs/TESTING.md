@@ -44,7 +44,7 @@ Contract tests live in `packages/contracts/src/*.test.ts` and protect shared req
 
 Backend tests live next to backend code and verify auth behavior through services and routes. The integration runner starts `postgres_test`, applies migrations, and runs register/login/refresh/logout/guard/error-shape scenarios. By default, the test database port is derived from the absolute repository path so parallel checkouts do not collide, and `TEST_DATABASE_URL` is derived from that port. Set `POSTGRES_TEST_PORT` and `TEST_DATABASE_URL` only when a fixed test database is required. Local database startup, credentials, and reset behavior are documented in [LOCAL_DATABASE.md](LOCAL_DATABASE.md).
 
-The integration and Docker smoke runners refuse database names that do not end with `_test` unless an override is set intentionally. This protects `web_app_demo` development data from test writes.
+The integration and Docker smoke runners refuse database names that do not end with `_test` unless an override is set intentionally. This protects `autoservice_app` development data from test writes.
 
 The Docker smoke test builds the backend image, starts it against `postgres_test`, waits for `/health`, and removes only the smoke container it created.
 
@@ -80,7 +80,7 @@ The webapp E2E flow:
 Useful env:
 
 ```bash
-TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:<test-port>/web_app_demo_test?schema=public"
+TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:<test-port>/autoservice_app_test?schema=public"
 POSTGRES_TEST_PORT=<test-port>
 E2E_BACKEND_PORT=<backend-port>
 E2E_WEB_PORT=<web-port>
@@ -114,7 +114,7 @@ Prerequisites:
 
 - Java 17+.
 - Xcode/iOS Simulator for iOS, or Android Studio/emulator for Android.
-- An installed Expo development build with `bundleIdentifier/package` set to `com.webappdemo.mobile`. Maestro should not run this template flow through Expo Go.
+- An installed Expo development build with `bundleIdentifier/package` set to `com.autoservice.app`. Maestro should not run this template flow through Expo Go.
 - A backend started against Docker Compose `postgres_test`, reachable at the `EXPO_PUBLIC_API_URL` used when Metro serves the bundle.
 - A host-reachable `E2E_API_HEALTH_URL` for runner preflight, for example `http://<LAN_IP>:3000/health`.
 - A host-reachable Metro URL in `MAESTRO_DEV_SERVER_URL`, for example `http://<LAN_IP>:8081`.
@@ -126,7 +126,7 @@ Start the mobile E2E backend on the test database in a separate terminal. Prefer
 docker compose version
 docker info
 docker compose up -d postgres_test
-export TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:54330/web_app_demo_test?schema=public"
+export TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:54330/autoservice_app_test?schema=public"
 export LAN_IP=<your-machine-lan-ip>
 export BACKEND_PORT=3000
 export METRO_PORT=8081
@@ -164,7 +164,7 @@ Useful env:
 
 ```bash
 MAESTRO_DEVICE="iPhone 16 Pro"
-MAESTRO_APP_ID=com.webappdemo.mobile
+MAESTRO_APP_ID=com.autoservice.app
 MAESTRO_DEV_SERVER_URL=http://<LAN_IP>:8081
 MAESTRO_DEV_CLIENT_SCHEME=exp+mobile
 MAESTRO_MIN_VERSION=2.4.0

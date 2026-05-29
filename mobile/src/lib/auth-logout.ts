@@ -1,4 +1,4 @@
-import type { LogoutRequest } from '@web-app-demo/contracts';
+import type { LogoutRequest } from '@autoservice-app/contracts';
 
 import type { ApiClient } from './api';
 

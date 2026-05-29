@@ -27,7 +27,7 @@ This section may be updated during first-run bootstrap. If the root `README.md` 
 - Expo Notifications
 - Expo Apple Authentication and React Native Google Sign-In for optional social auth
 - Expo IAP for iOS App Store subscription transport
-- Zod contracts from `@web-app-demo/contracts`
+- Zod contracts from `@autoservice-app/contracts`
 - Native ShadCN-style UI primitives in `src/components/ui`
 - Maestro E2E smoke flow
 
@@ -55,8 +55,8 @@ EXPO_PUBLIC_API_URL=http://localhost:3000
 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=
 EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME=
-EXPO_PUBLIC_IAP_IOS_MONTHLY_PRODUCT_ID=com.example.app.premium.monthly
-EXPO_PUBLIC_IAP_IOS_YEARLY_PRODUCT_ID=com.example.app.premium.yearly
+EXPO_PUBLIC_IAP_IOS_MONTHLY_PRODUCT_ID=com.autoservice.app.premium.monthly
+EXPO_PUBLIC_IAP_IOS_YEARLY_PRODUCT_ID=com.autoservice.app.premium.yearly
 EXPO_PUBLIC_DISABLE_PUSH_NOTIFICATIONS=0
 ```
 
@@ -129,7 +129,7 @@ Start the backend test database and API in a separate terminal:
 docker compose version
 docker info
 docker compose up -d postgres_test
-export TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:54330/web_app_demo_test?schema=public"
+export TEST_DATABASE_URL="postgresql://superuser:superpassword@localhost:54330/autoservice_app_test?schema=public"
 export LAN_IP=<your-machine-lan-ip>
 export BACKEND_PORT=3000
 export METRO_PORT=8081

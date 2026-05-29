@@ -7,7 +7,7 @@ import { loadEnv } from './env'
 describe('loadEnv', () => {
   test('parses defaults and comma-separated origins', () => {
     const env = loadEnv({
-      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
       JWT_SECRET: '12345678901234567890123456789012',
       CORS_ORIGINS: 'http://localhost:5173, http://localhost:8081',
     })
@@ -37,21 +37,21 @@ describe('loadEnv', () => {
     expect(env.APPLE_AUTH_BUNDLE_ID).toBeUndefined()
     expect(env.GOOGLE_AUTH_CLIENT_IDS).toEqual([])
     expect(env.APPLE_IAP_PRODUCT_IDS).toEqual([
-      'com.example.app.premium.monthly',
-      'com.example.app.premium.yearly',
+      'com.autoservice.app.premium.monthly',
+      'com.autoservice.app.premium.yearly',
     ])
   })
 
   test('parses social auth provider configuration', () => {
     const env = loadEnv({
-      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
       JWT_SECRET: '12345678901234567890123456789012',
-      APPLE_AUTH_BUNDLE_ID: 'com.example.app',
+      APPLE_AUTH_BUNDLE_ID: 'com.autoservice.app',
       APPLE_AUTH_JWKS_TIMEOUT_MS: '8000',
       GOOGLE_AUTH_CLIENT_IDS: 'ios-client-id, web-client-id',
     })
 
-    expect(env.APPLE_AUTH_BUNDLE_ID).toBe('com.example.app')
+    expect(env.APPLE_AUTH_BUNDLE_ID).toBe('com.autoservice.app')
     expect(env.APPLE_AUTH_JWKS_TIMEOUT_MS).toBe(8000)
     expect(env.GOOGLE_AUTH_CLIENT_IDS).toEqual(['ios-client-id', 'web-client-id'])
   })
@@ -59,21 +59,21 @@ describe('loadEnv', () => {
   test('requires complete DigitalOcean Spaces configuration when storage is enabled', () => {
     expect(() =>
       loadEnv({
-        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
         JWT_SECRET: '12345678901234567890123456789012',
         SPACES_BUCKET: 'uploads',
       }),
     ).toThrow()
     expect(() =>
       loadEnv({
-        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
         JWT_SECRET: '12345678901234567890123456789012',
         SPACES_CDN_BASE_URL: 'https://images.example.com',
       }),
     ).toThrow()
 
     const env = loadEnv({
-      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
       JWT_SECRET: '12345678901234567890123456789012',
       SPACES_REGION: 'nyc3',
       SPACES_BUCKET: 'uploads',
@@ -92,14 +92,14 @@ describe('loadEnv', () => {
     expect(() =>
       loadEnv({
         NODE_ENV: 'production',
-        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
         JWT_SECRET: 'replace-with-at-least-32-random-characters',
       }),
     ).toThrow('JWT_SECRET')
 
     expect(() =>
       loadEnv({
-        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+        DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
         JWT_SECRET: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         COOKIE_SECURE: 'true',
         CORS_ORIGINS: 'https://web.example.com',
@@ -109,7 +109,7 @@ describe('loadEnv', () => {
 
   test('rejects unsafe production CORS origins', () => {
     const baseEnv = {
-      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
       JWT_SECRET: '12345678901234567890123456789012',
     }
 
@@ -145,21 +145,21 @@ describe('loadEnv', () => {
 
   test('requires complete App Store IAP verification config when enabled', () => {
     const baseEnv = {
-      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/web_app_demo',
+      DATABASE_URL: 'postgresql://superuser:superpassword@localhost:54329/autoservice_app',
       JWT_SECRET: '12345678901234567890123456789012',
     }
 
     expect(() =>
       loadEnv({
         ...baseEnv,
-        APPLE_IAP_BUNDLE_ID: 'com.example.app',
+        APPLE_IAP_BUNDLE_ID: 'com.autoservice.app',
       }),
     ).toThrow('APPLE_IAP_ISSUER_ID')
 
     expect(() =>
       loadEnv({
         ...baseEnv,
-        APPLE_IAP_BUNDLE_ID: 'com.example.app',
+        APPLE_IAP_BUNDLE_ID: 'com.autoservice.app',
         APPLE_IAP_ENVIRONMENT: 'Production',
         APPLE_IAP_ISSUER_ID: 'issuer-id',
         APPLE_IAP_KEY_ID: 'key-id',
@@ -170,7 +170,7 @@ describe('loadEnv', () => {
     expect(() =>
       loadEnv({
         ...baseEnv,
-        APPLE_IAP_BUNDLE_ID: 'com.example.app',
+        APPLE_IAP_BUNDLE_ID: 'com.autoservice.app',
         APPLE_IAP_ISSUER_ID: 'issuer-id',
         APPLE_IAP_KEY_ID: 'key-id',
         APPLE_IAP_PRIVATE_KEY_BASE64: 'private-key',
@@ -179,7 +179,7 @@ describe('loadEnv', () => {
 
     const env = loadEnv({
       ...baseEnv,
-      APPLE_IAP_BUNDLE_ID: 'com.example.app',
+      APPLE_IAP_BUNDLE_ID: 'com.autoservice.app',
       APPLE_IAP_ISSUER_ID: 'issuer-id',
       APPLE_IAP_KEY_ID: 'key-id',
       APPLE_IAP_PRIVATE_KEY_BASE64: 'private-key',

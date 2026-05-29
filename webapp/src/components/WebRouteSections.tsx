@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import type { UserDto } from '@web-app-demo/contracts'
+import type { UserDto } from '@autoservice-app/contracts'
 import type { PropsWithChildren, ReactNode } from 'react'
 
 import { AuthForm } from '@/components/AuthForm'

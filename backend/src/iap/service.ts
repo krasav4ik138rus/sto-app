@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { AutoRenewStatus, Environment, OfferType, Status, Type, type JWSRenewalInfoDecodedPayload, type JWSTransactionDecodedPayload } from '@apple/app-store-server-library'
-import type { SubscriptionSnapshot } from '@web-app-demo/contracts'
+import type { SubscriptionSnapshot } from '@autoservice-app/contracts'
 
 import type { DbClient } from '../db'
 import type { AppEnv } from '../env'

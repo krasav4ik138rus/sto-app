@@ -61,7 +61,7 @@ export function createApp({ env, iapVerifier, prisma }: CreateAppOptions) {
 
   app.get('/', (c) => {
     return c.json({
-      name: 'web_app_demo backend',
+      name: 'autoservice_app backend',
       status: 'ok',
     })
   })
@@ -80,7 +80,7 @@ export function createApp({ env, iapVerifier, prisma }: CreateAppOptions) {
   app.doc('/openapi.json', {
     openapi: '3.0.0',
     info: {
-      title: 'web_app_demo API',
+      title: 'autoservice_app API',
       version: '1.0.0',
     },
   })

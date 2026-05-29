@@ -15,7 +15,7 @@ This template includes mobile-first Apple and Google authentication on top of th
 Add these to `backend/.env` when social auth is active:
 
 ```bash
-APPLE_AUTH_BUNDLE_ID=com.example.app
+APPLE_AUTH_BUNDLE_ID=com.autoservice.app
 APPLE_AUTH_JWKS_TIMEOUT_MS=5000
 GOOGLE_AUTH_CLIENT_IDS=ios-client-id.apps.googleusercontent.com,web-client-id.apps.googleusercontent.com
 ```

@@ -6,6 +6,17 @@
 
 A full-stack starter for web and mobile products: one repository with a Bun/Hono backend, a React CSR browser client (`webapp`), an Astro SSG/SSR site (`website`), an Expo mobile app, and shared API contracts. The goal is to give agents and developers clear architectural boundaries so new features keep following the same shape.
 
+## Autoservice App Project Setup
+
+- Project name/slug: `autoservice-app`.
+- Product: full-stack Android-first app for auto service station workers and directors/managers.
+- First user journey: authenticate, create and manage vehicle inspection acts, attach inspection photos/media, and track inspection/reporting statuses.
+- Active surfaces now: `mobile`, `backend/API`, `webapp`, `website`, and shared contracts. Mobile and backend/API are the first implementation priority; browser surfaces stay available for director/admin reporting.
+- First-version needs: auth, PostgreSQL persistence, uploads/photos/media, role-aware reporting, and live status updates.
+- Deferred: chat/presence can be added after the inspection/status workflow is stable.
+- Deployment: local development only for now. DigitalOcean production setup is deferred.
+- Expo/EAS: not configured yet. Do not add `expo.owner` or EAS `projectId` until a real Expo account/organization is selected.
+
 ## Agent Intake Checklist Before Installing
 
 Before cloning or installing this template for an end user, the agent should ask a short product-focused intake in the user's language and record the answers during setup:
@@ -97,7 +108,7 @@ This template ships two browser surfaces. Putting a feature in the wrong one is 
 - Build it in **`website`** (Astro, static by default, SSR per route) when the pages must be **public and found by search engines or shared with rich link previews**: marketing/landing pages, content sites, blogs, docs, and the public storefront of a **marketplace** (home, category, search, and product/listing pages that Google must index). This is the SEO surface. Pages are static SSG by default; switch a single dynamic route to server-rendering with `export const prerender = false` when its data changes often or is request-specific (search results, live inventory/prices).
 - Build it in **`webapp`** (React, client-side rendered) when the screens live **behind sign-in and do not need SEO**: dashboards, account settings, authenticated tools, the seller/admin panel of a marketplace. No crawler needs these, so CSR is the simpler, cheaper choice.
 
-Rule of thumb for the agent: *if a page must rank in search or preview nicely when shared, it belongs in `website`; if it is only reachable after login, it belongs in `webapp`.* Real products often use **both** — for a marketplace, the public catalog lives in `website` and the authenticated app lives in `webapp`, and both reuse the same `@web-app-demo/contracts` schemas. Do not rebuild SEO pages inside `webapp` to "keep everything in one app"; that loses the SEO the product needs.
+Rule of thumb for the agent: *if a page must rank in search or preview nicely when shared, it belongs in `website`; if it is only reachable after login, it belongs in `webapp`.* Real products often use **both** — for a marketplace, the public catalog lives in `website` and the authenticated app lives in `webapp`, and both reuse the same `@autoservice-app/contracts` schemas. Do not rebuild SEO pages inside `webapp` to "keep everything in one app"; that loses the SEO the product needs.
 
 ## Quick Start
 
@@ -181,7 +192,7 @@ Android emulators usually need `http://10.0.2.2:3000` instead of `localhost`.
 
 Mobile Maestro E2E should use a LAN-reachable `EXPO_PUBLIC_API_URL`, a host-reachable `MAESTRO_DEV_SERVER_URL`, and `EXPO_PUBLIC_E2E=1` only for the E2E Metro session. See [docs/TESTING.md](docs/TESTING.md) before adding or running mobile flows.
 
-Test runners use the separate Docker Compose `postgres_test` service and the `TEST_DATABASE_URL` shape from `.env.example`/`backend/.env.example`. Webapp Playwright E2E starts `postgres_test`, applies migrations to `web_app_demo_test`, runs the browser flow, and tears down its test database volume by default.
+Test runners use the separate Docker Compose `postgres_test` service and the `TEST_DATABASE_URL` shape from `.env.example`/`backend/.env.example`. Webapp Playwright E2E starts `postgres_test`, applies migrations to `autoservice_app_test`, runs the browser flow, and tears down its test database volume by default.
 
 ## Workspace Commands
 

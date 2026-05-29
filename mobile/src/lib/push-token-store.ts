@@ -6,8 +6,8 @@ import {
   unregisterKnownExpoPushTokens,
 } from './push-token-cleanup';
 
-const pushTokenKey = 'web_app_demo_expo_push_token';
-const pushTokenCleanupKey = 'web_app_demo_expo_push_token_cleanup';
+const pushTokenKey = 'autoservice_app_expo_push_token';
+const pushTokenCleanupKey = 'autoservice_app_expo_push_token_cleanup';
 const pushTokenCleanupLimit = 10;
 
 async function getItem(key: string) {

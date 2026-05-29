@@ -9,7 +9,7 @@ import {
   registerRequestSchema,
   socialAuthProviderParamsSchema,
   socialAuthRequestSchema,
-} from '@web-app-demo/contracts'
+} from '@autoservice-app/contracts'
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi'
 import type { Context } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
@@ -18,7 +18,7 @@ import type { AppEnv } from '../env'
 import { AppError, validationErrorHook } from '../http/errors'
 import type { AuthService } from './service'
 
-const refreshCookieName = 'web_app_demo_refresh'
+const refreshCookieName = 'autoservice_app_refresh'
 
 type AuthRouteEnv = {
   Variables: {
