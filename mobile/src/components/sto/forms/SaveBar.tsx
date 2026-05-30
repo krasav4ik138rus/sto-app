@@ -11,6 +11,7 @@ type SaveBarProps = {
   dirty: boolean;
   isLastSection: boolean;
   saving: boolean;
+  nextLabel?: string;
   onNext: () => void;
   onSave: () => void;
   onSaveExit: () => void;
@@ -21,6 +22,7 @@ export function SaveBar({
   dirty,
   isLastSection,
   saving,
+  nextLabel = 'Следующий раздел',
   onNext,
   onSave,
   onSaveExit,
@@ -42,7 +44,7 @@ export function SaveBar({
       </View>
       <View style={styles.actions}>
         <Button disabled={isLastSection} variant="outline" onPress={onNext}>
-          Следующий раздел
+          {nextLabel}
         </Button>
         <Button disabled={!dirty || saving} loading={saving} variant="outline" onPress={onSave}>
           Сохранить

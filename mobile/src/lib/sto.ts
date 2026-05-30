@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  CreateDiagnosticInput,
   PatchInspectionActInput,
   StaffRole,
+  UpdateDiagnosticInput,
   UpsertInspectionActInput,
   WorkOrderStatus,
 } from '@autoservice-app/contracts';
@@ -15,6 +17,9 @@ export const stoQueryKeys = {
     ['sto', 'orders', filters?.search ?? '', filters?.status ?? 'ALL'] as const,
   order: (id: string) => ['sto', 'orders', id] as const,
   inspection: (orderId: string) => ['sto', 'orders', orderId, 'inspection'] as const,
+  diagnostics: (orderId: string) => ['sto', 'orders', orderId, 'diagnostics'] as const,
+  diagnostic: (diagnosticId: string) => ['sto', 'diagnostics', diagnosticId] as const,
+  summary: (orderId: string) => ['sto', 'orders', orderId, 'summary'] as const,
   customers: (search?: string) => ['sto', 'customers', search ?? ''] as const,
   vehicles: (search?: string, customerId?: string | null) =>
     ['sto', 'vehicles', search ?? '', customerId ?? ''] as const,
@@ -91,6 +96,63 @@ export function usePatchInspection(orderId: string) {
   });
 }
 
+export function useDiagnostics(orderId: string | undefined) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: stoQueryKeys.diagnostics(orderId ?? ''),
+    enabled: auth.isAuthenticated && Boolean(orderId),
+    queryFn: () => auth.api.listDiagnostics(orderId ?? ''),
+  });
+}
+
+export function useDiagnostic(diagnosticId: string | undefined) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: stoQueryKeys.diagnostic(diagnosticId ?? ''),
+    enabled: auth.isAuthenticated && Boolean(diagnosticId),
+    queryFn: () => auth.api.getDiagnostic(diagnosticId ?? ''),
+  });
+}
+
+export function useCreateDiagnostic(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateDiagnosticInput) => auth.api.createDiagnostic(orderId, input),
+    onSuccess: async (diagnostic) => {
+      await invalidateDiagnosticState(queryClient, orderId, diagnostic.id);
+    },
+  });
+}
+
+export function useUpdateDiagnostic(diagnosticId: string | undefined, orderId?: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateDiagnosticInput) => {
+      if (!diagnosticId) throw new Error('Diagnostic id is required');
+      return auth.api.updateDiagnostic(diagnosticId, input);
+    },
+    onSuccess: async (diagnostic) => {
+      await invalidateDiagnosticState(queryClient, orderId ?? diagnostic.workOrderId, diagnostic.id);
+    },
+  });
+}
+
+export function useWorkOrderSummary(orderId: string | undefined) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: stoQueryKeys.summary(orderId ?? ''),
+    enabled: auth.isAuthenticated && Boolean(orderId),
+    queryFn: () => auth.api.getWorkOrderSummary(orderId ?? ''),
+  });
+}
+
 export function canCreateOrders(role: StaffRole | undefined) {
   return role === 'MASTER' || role === 'DIRECTOR' || role === 'ADMIN';
 }
@@ -99,6 +161,20 @@ async function invalidateInspectionState(queryClient: ReturnType<typeof useQuery
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.inspection(orderId) }),
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
+    queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
+  ]);
+}
+
+async function invalidateDiagnosticState(
+  queryClient: ReturnType<typeof useQueryClient>,
+  orderId: string,
+  diagnosticId: string,
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.diagnostics(orderId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.diagnostic(diagnosticId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(orderId) }),
     queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
   ]);
 }
