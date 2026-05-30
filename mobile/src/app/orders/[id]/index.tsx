@@ -90,7 +90,7 @@ export default function OrderDetailScreen() {
         <View style={styles.actions}>
           {['inspection', 'diagnostics', 'recommendations', 'attachments', 'summary'].map((route) => (
             <Button key={route} variant="outline" onPress={() => router.push(`/orders/${id}/${route}` as Href)}>
-              {actionLabel(route)}
+              {actionLabel(route, data.inspectionAct !== null)}
             </Button>
           ))}
         </View>
@@ -140,10 +140,10 @@ function statusOptions(role: StaffRole | undefined) {
   return workOrderStatuses;
 }
 
-function actionLabel(route: string) {
+function actionLabel(route: string, inspectionCompleted: boolean) {
   switch (route) {
     case 'inspection':
-      return 'Акт';
+      return inspectionCompleted ? 'Акт заполнен' : 'Акт не заполнен';
     case 'diagnostics':
       return 'Диагностика';
     case 'recommendations':

@@ -8,7 +8,7 @@ This step turns the post-auth mobile app into an STO working shell connected to 
 - `/orders/new`: create work order screen.
 - `/orders/[id]`: work order detail screen with status history and status change actions.
 - `/profile`: staff profile/settings tab.
-- `/orders/[id]/inspection`: placeholder.
+- `/orders/[id]/inspection`: working inspection act screen. See [STO Mobile Inspection](./STO_MOBILE_INSPECTION.md).
 - `/orders/[id]/diagnostics`: placeholder.
 - `/orders/[id]/recommendations`: placeholder.
 - `/orders/[id]/attachments`: placeholder.
@@ -79,7 +79,6 @@ After login the app loads `GET /api/sto/me` through TanStack Query. The UI shows
 
 The following are intentionally placeholders in this step:
 
-- Inspection form.
 - Diagnostic form.
 - Recommendations UI.
 - Photo/file upload UI.

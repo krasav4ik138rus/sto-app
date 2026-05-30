@@ -1,17 +1,27 @@
 import {
   apiErrorSchema,
+  attachmentDeleteResponseSchema,
+  attachmentsListResponseSchema,
   appStoreOfferCodeRedemptionResponseSchema,
   authResponseSchema,
   appStoreReconcileRequestSchema,
   appStoreTransactionRequestSchema,
   changeWorkOrderStatusInputSchema,
+  createAttachmentMetadataInputSchema,
   createCustomerInputSchema,
+  createDiagnosticInputSchema,
+  createRecommendationInputSchema,
   createVehicleInputSchema,
   createWorkOrderInputSchema,
   customerSchema,
+  diagnosticSchema,
+  diagnosticsListResponseSchema,
   iapEntitlementResponseSchema,
   iapMutationResponseSchema,
+  inspectionActResponseSchema,
+  listAttachmentsQuerySchema,
   listCustomersQuerySchema,
+  listRecommendationsQuerySchema,
   listVehiclesQuerySchema,
   listWorkOrdersQuerySchema,
   loginRequestSchema,
@@ -23,41 +33,66 @@ import {
   refreshResponseSchema,
   registerPushTokenRequestSchema,
   registerRequestSchema,
+  recommendationSchema,
+  recommendationsListResponseSchema,
   serviceCenterSchema,
   socialAuthProviderSchema,
   socialAuthRequestSchema,
   staffProfileSchema,
   testPushNotificationRequestSchema,
   testPushNotificationResponseSchema,
+  updateDiagnosticInputSchema,
+  updateRecommendationInputSchema,
   updateWorkOrderInputSchema,
   unregisterPushTokenRequestSchema,
+  upsertInspectionActInputSchema,
+  patchInspectionActInputSchema,
   userSchema,
   vehicleSchema,
   workOrderDetailSchema,
   workOrderListItemSchema,
+  workOrderSummarySchema,
+  orderAttachmentSchema,
   type AuthResponse,
   type AppStoreReconcileRequest,
   type AppStoreTransactionRequest,
   type AppStoreOfferCodeRedemptionResponse,
   type ChangeWorkOrderStatusInput,
+  type CreateAttachmentMetadataInput,
   type CreateCustomerInput,
+  type CreateDiagnosticInput,
+  type CreateRecommendationInput,
   type CreateVehicleInput,
   type CreateWorkOrderInput,
   type CustomerDto,
+  type DiagnosticDto,
+  type DiagnosticsListResponse,
   type IapEntitlementResponse,
   type IapMutationResponse,
+  type InspectionActResponse,
+  type ListAttachmentsQuery,
   type ListCustomersQuery,
+  type ListRecommendationsQuery,
   type ListVehiclesQuery,
   type ListWorkOrdersQuery,
   type LoginRequest,
   type LogoutRequest,
   type MeResponse,
+  type OrderAttachmentDto,
+  type AttachmentsListResponse,
+  type PatchInspectionActInput,
+  type RecommendationDto,
+  type RecommendationsListResponse,
   type ServiceCenterDto,
   type StaffRole,
+  type UpdateDiagnosticInput,
+  type UpdateRecommendationInput,
   type UpdateWorkOrderInput,
+  type UpsertInspectionActInput,
   type VehicleDto,
   type WorkOrderDetailDto,
   type WorkOrderListItemDto,
+  type WorkOrderSummaryDto,
   type PushMutationResponse,
   type RefreshResponse,
   type RegisterRequest,
@@ -82,7 +117,7 @@ type ApiClientOptions = {
 };
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   auth?: boolean;
   retryOnUnauthorized?: boolean;
@@ -327,6 +362,126 @@ export class ApiClient {
     return this.request(`/api/sto/orders/${encodeURIComponent(id)}/status`, workOrderDetailSchema, {
       method: 'POST',
       body: payload,
+      auth: true,
+    });
+  }
+
+  getInspection(orderId: string): Promise<InspectionActResponse> {
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/inspection`, inspectionActResponseSchema, {
+      auth: true,
+    });
+  }
+
+  upsertInspection(orderId: string, input: UpsertInspectionActInput): Promise<InspectionActResponse> {
+    const payload = upsertInspectionActInputSchema.parse(input);
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/inspection`, inspectionActResponseSchema, {
+      method: 'PUT',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  patchInspection(orderId: string, input: PatchInspectionActInput): Promise<InspectionActResponse> {
+    const payload = patchInspectionActInputSchema.parse(input);
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/inspection`, inspectionActResponseSchema, {
+      method: 'PATCH',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  listDiagnostics(orderId: string): Promise<DiagnosticsListResponse> {
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/diagnostics`, diagnosticsListResponseSchema, {
+      auth: true,
+    });
+  }
+
+  createDiagnostic(orderId: string, input: CreateDiagnosticInput): Promise<DiagnosticDto> {
+    const payload = createDiagnosticInputSchema.parse(input);
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/diagnostics`, diagnosticSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  getDiagnostic(diagnosticId: string): Promise<DiagnosticDto> {
+    return this.request(`/api/sto/diagnostics/${encodeURIComponent(diagnosticId)}`, diagnosticSchema, {
+      auth: true,
+    });
+  }
+
+  updateDiagnostic(diagnosticId: string, input: UpdateDiagnosticInput): Promise<DiagnosticDto> {
+    const payload = updateDiagnosticInputSchema.parse(input);
+    return this.request(`/api/sto/diagnostics/${encodeURIComponent(diagnosticId)}`, diagnosticSchema, {
+      method: 'PUT',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  listRecommendations(
+    orderId: string,
+    query: ListRecommendationsQuery = {},
+  ): Promise<RecommendationsListResponse> {
+    const parsed = listRecommendationsQuerySchema.parse(query);
+    return this.request(
+      `/api/sto/orders/${encodeURIComponent(orderId)}/recommendations${queryString(parsed)}`,
+      recommendationsListResponseSchema,
+      {
+        auth: true,
+      },
+    );
+  }
+
+  createRecommendation(orderId: string, input: CreateRecommendationInput): Promise<RecommendationDto> {
+    const payload = createRecommendationInputSchema.parse(input);
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/recommendations`, recommendationSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  updateRecommendation(recommendationId: string, input: UpdateRecommendationInput): Promise<RecommendationDto> {
+    const payload = updateRecommendationInputSchema.parse(input);
+    return this.request(`/api/sto/recommendations/${encodeURIComponent(recommendationId)}`, recommendationSchema, {
+      method: 'PATCH',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  listAttachments(orderId: string, query: ListAttachmentsQuery = {}): Promise<AttachmentsListResponse> {
+    const parsed = listAttachmentsQuerySchema.parse(query);
+    return this.request(
+      `/api/sto/orders/${encodeURIComponent(orderId)}/attachments${queryString(parsed)}`,
+      attachmentsListResponseSchema,
+      {
+        auth: true,
+      },
+    );
+  }
+
+  createAttachmentMetadata(orderId: string, input: CreateAttachmentMetadataInput): Promise<OrderAttachmentDto> {
+    const payload = createAttachmentMetadataInputSchema.parse(input);
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/attachments`, orderAttachmentSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  async deleteAttachment(attachmentId: string): Promise<boolean> {
+    const response = await this.request(`/api/sto/attachments/${encodeURIComponent(attachmentId)}`, attachmentDeleteResponseSchema, {
+      method: 'DELETE',
+      auth: true,
+    });
+    return response.ok;
+  }
+
+  getWorkOrderSummary(orderId: string): Promise<WorkOrderSummaryDto> {
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/summary`, workOrderSummarySchema, {
       auth: true,
     });
   }

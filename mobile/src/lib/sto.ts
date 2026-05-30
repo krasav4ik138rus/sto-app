@@ -1,5 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import type { StaffRole, WorkOrderStatus } from '@autoservice-app/contracts';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type {
+  PatchInspectionActInput,
+  StaffRole,
+  UpsertInspectionActInput,
+  WorkOrderStatus,
+} from '@autoservice-app/contracts';
 
 import { ApiRequestError } from './api';
 import { useAuth } from './auth';
@@ -9,6 +14,7 @@ export const stoQueryKeys = {
   orders: (filters?: { search?: string; status?: WorkOrderStatus }) =>
     ['sto', 'orders', filters?.search ?? '', filters?.status ?? 'ALL'] as const,
   order: (id: string) => ['sto', 'orders', id] as const,
+  inspection: (orderId: string) => ['sto', 'orders', orderId, 'inspection'] as const,
   customers: (search?: string) => ['sto', 'customers', search ?? ''] as const,
   vehicles: (search?: string, customerId?: string | null) =>
     ['sto', 'vehicles', search ?? '', customerId ?? ''] as const,
@@ -51,8 +57,50 @@ export function useStoMe() {
   });
 }
 
+export function useInspection(orderId: string | undefined) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: stoQueryKeys.inspection(orderId ?? ''),
+    enabled: auth.isAuthenticated && Boolean(orderId),
+    queryFn: () => auth.api.getInspection(orderId ?? ''),
+  });
+}
+
+export function useUpsertInspection(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpsertInspectionActInput) => auth.api.upsertInspection(orderId, input),
+    onSuccess: async () => {
+      await invalidateInspectionState(queryClient, orderId);
+    },
+  });
+}
+
+export function usePatchInspection(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: PatchInspectionActInput) => auth.api.patchInspection(orderId, input),
+    onSuccess: async () => {
+      await invalidateInspectionState(queryClient, orderId);
+    },
+  });
+}
+
 export function canCreateOrders(role: StaffRole | undefined) {
   return role === 'MASTER' || role === 'DIRECTOR' || role === 'ADMIN';
+}
+
+async function invalidateInspectionState(queryClient: ReturnType<typeof useQueryClient>, orderId: string) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.inspection(orderId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
+    queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
+  ]);
 }
 
 export function getApiErrorMessage(error: unknown) {
