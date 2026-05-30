@@ -17,6 +17,8 @@ A full-stack starter for web and mobile products: one repository with a Bun/Hono
 - Deployment: local development only for now. DigitalOcean production setup is deferred.
 - Expo/EAS: not configured yet. Do not add `expo.owner` or EAS `projectId` until a real Expo account/organization is selected.
 
+Adapted STO product docs live in [docs/STO_PRODUCT_SPEC.md](docs/STO_PRODUCT_SPEC.md), [docs/STO_DOMAIN_MODEL.md](docs/STO_DOMAIN_MODEL.md), [docs/STO_FORMS.md](docs/STO_FORMS.md), [docs/STO_MOBILE_UI.md](docs/STO_MOBILE_UI.md), and [docs/STO_BACKLOG.md](docs/STO_BACKLOG.md).
+
 ## Agent Intake Checklist Before Installing
 
 Before cloning or installing this template for an end user, the agent should ask a short product-focused intake in the user's language and record the answers during setup:
