@@ -11,6 +11,7 @@ import { createAppStoreSubscriptionVerifier, type AppStoreSubscriptionVerifier }
 import { createAppStoreWebhookRoutes, createIapRoutes } from './iap/routes'
 import { createNotificationRoutes } from './notifications/routes'
 import { createStorageServiceFromEnv, type StorageService } from './storage/service'
+import { createStoRoutes } from './sto/sto.routes'
 
 export type AppBindings = {
   Variables: {
@@ -45,7 +46,7 @@ export function createApp({ env, iapVerifier, prisma }: CreateAppOptions) {
         return env.CORS_ORIGINS.includes(origin) ? origin : null
       },
       allowHeaders: ['Content-Type', 'Authorization', 'X-Client-Platform'],
-      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
       credentials: true,
       maxAge: 600,
     }),
@@ -75,6 +76,7 @@ export function createApp({ env, iapVerifier, prisma }: CreateAppOptions) {
   app.route('/api/auth', createAuthRoutes())
   app.route('/api/iap', createIapRoutes())
   app.route('/api/notifications', createNotificationRoutes())
+  app.route('/api/sto', createStoRoutes())
   app.route('/api/webhooks', createAppStoreWebhookRoutes())
 
   app.doc('/openapi.json', {

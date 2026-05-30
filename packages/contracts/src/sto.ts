@@ -542,9 +542,9 @@ export type UpdateAttachmentMetadataInput = z.input<typeof updateAttachmentMetad
 export type CreateStaffProfileInput = z.input<typeof createStaffProfileInputSchema>
 export type UpdateStaffProfileInput = z.input<typeof updateStaffProfileInputSchema>
 
-export type ListWorkOrdersQuery = z.input<typeof listWorkOrdersQuerySchema>
-export type ListCustomersQuery = z.input<typeof listCustomersQuerySchema>
-export type ListVehiclesQuery = z.input<typeof listVehiclesQuerySchema>
-export type ListRecommendationsQuery = z.input<typeof listRecommendationsQuerySchema>
-export type ListAttachmentsQuery = z.input<typeof listAttachmentsQuerySchema>
-export type ListStaffProfilesQuery = z.input<typeof listStaffProfilesQuerySchema>
+export type ListWorkOrdersQuery = z.output<typeof listWorkOrdersQuerySchema>
+export type ListCustomersQuery = z.output<typeof listCustomersQuerySchema>
+export type ListVehiclesQuery = z.output<typeof listVehiclesQuerySchema>
+export type ListRecommendationsQuery = z.output<typeof listRecommendationsQuerySchema>
+export type ListAttachmentsQuery = z.output<typeof listAttachmentsQuerySchema>
+export type ListStaffProfilesQuery = z.output<typeof listStaffProfilesQuerySchema>

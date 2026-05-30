@@ -16,6 +16,7 @@ export const apiErrorCodeSchema = z.enum([
   'IAP_NOT_CONFIGURED',
   'IAP_INVALID_TRANSACTION',
   'IAP_OWNERSHIP_MISMATCH',
+  'STO_STAFF_PROFILE_REQUIRED',
   'INTERNAL_ERROR',
 ])
 
