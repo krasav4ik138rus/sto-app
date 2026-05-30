@@ -33,18 +33,18 @@ export default function AppTabs() {
         ],
       }}>
       <RouterTabs.Screen
-        name="components"
+        name="orders"
         options={{
-          title: 'Components',
+          title: 'Заказы',
           tabBarLabel: ({ color }) => (
             <Typography colorValue={color} variant="caption" weight="700">
-              Components
+              Заказы
             </Typography>
           ),
           tabBarButtonTestID: TEST_IDS.tabs.componentsTab,
           tabBarIcon: ({ color, size }) => (
             <SymbolView
-              name={{ ios: 'square.grid.2x2.fill', android: 'view_module', web: 'view_module' }}
+              name={{ ios: 'list.bullet.rectangle.fill', android: 'assignment', web: 'assignment' }}
               size={size}
               tintColor={color}
             />
@@ -54,10 +54,10 @@ export default function AppTabs() {
       <RouterTabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Профиль',
           tabBarLabel: ({ color }) => (
             <Typography colorValue={color} variant="caption" weight="700">
-              Profile
+              Профиль
             </Typography>
           ),
           tabBarButtonTestID: TEST_IDS.tabs.profileTab,
@@ -70,6 +70,7 @@ export default function AppTabs() {
           ),
         }}
       />
+      <RouterTabs.Screen name="components" options={{ href: null }} />
     </RouterTabs>
   );
 }

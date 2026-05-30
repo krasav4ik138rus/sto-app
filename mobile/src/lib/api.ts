@@ -4,30 +4,60 @@ import {
   authResponseSchema,
   appStoreReconcileRequestSchema,
   appStoreTransactionRequestSchema,
+  changeWorkOrderStatusInputSchema,
+  createCustomerInputSchema,
+  createVehicleInputSchema,
+  createWorkOrderInputSchema,
+  customerSchema,
   iapEntitlementResponseSchema,
   iapMutationResponseSchema,
+  listCustomersQuerySchema,
+  listVehiclesQuerySchema,
+  listWorkOrdersQuerySchema,
   loginRequestSchema,
   logoutRequestSchema,
   meResponseSchema,
+  organizationSchema,
   pushMutationResponseSchema,
   refreshRequestSchema,
   refreshResponseSchema,
   registerPushTokenRequestSchema,
   registerRequestSchema,
+  serviceCenterSchema,
   socialAuthProviderSchema,
   socialAuthRequestSchema,
+  staffProfileSchema,
   testPushNotificationRequestSchema,
   testPushNotificationResponseSchema,
+  updateWorkOrderInputSchema,
   unregisterPushTokenRequestSchema,
+  userSchema,
+  vehicleSchema,
+  workOrderDetailSchema,
+  workOrderListItemSchema,
   type AuthResponse,
   type AppStoreReconcileRequest,
   type AppStoreTransactionRequest,
   type AppStoreOfferCodeRedemptionResponse,
+  type ChangeWorkOrderStatusInput,
+  type CreateCustomerInput,
+  type CreateVehicleInput,
+  type CreateWorkOrderInput,
+  type CustomerDto,
   type IapEntitlementResponse,
   type IapMutationResponse,
+  type ListCustomersQuery,
+  type ListVehiclesQuery,
+  type ListWorkOrdersQuery,
   type LoginRequest,
   type LogoutRequest,
   type MeResponse,
+  type ServiceCenterDto,
+  type StaffRole,
+  type UpdateWorkOrderInput,
+  type VehicleDto,
+  type WorkOrderDetailDto,
+  type WorkOrderListItemDto,
   type PushMutationResponse,
   type RefreshResponse,
   type RegisterRequest,
@@ -38,7 +68,7 @@ import {
   type TestPushNotificationResponse,
   type UnregisterPushTokenRequest,
 } from '@autoservice-app/contracts';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
@@ -52,7 +82,7 @@ type ApiClientOptions = {
 };
 
 type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH';
   body?: unknown;
   auth?: boolean;
   retryOnUnauthorized?: boolean;
@@ -71,6 +101,39 @@ export class ApiRequestError extends Error {
     super(message);
   }
 }
+
+const stoMeResponseSchema = z.object({
+  user: userSchema,
+  staffProfile: staffProfileSchema,
+  organization: organizationSchema,
+  serviceCenter: serviceCenterSchema.nullable(),
+  role: staffProfileSchema.shape.role,
+});
+
+const serviceCentersListResponseSchema = z.object({
+  items: z.array(serviceCenterSchema),
+});
+
+const customersListResponseSchema = z.object({
+  items: z.array(customerSchema),
+  nextCursor: z.string().nullable(),
+});
+
+const vehiclesListResponseSchema = z.object({
+  items: z.array(vehicleSchema),
+  nextCursor: z.string().nullable(),
+});
+
+const workOrdersListResponseSchema = z.object({
+  items: z.array(workOrderListItemSchema),
+  nextCursor: z.string().nullable(),
+});
+
+export type StoMeResponse = z.infer<typeof stoMeResponseSchema>;
+export type ServiceCentersListResponse = z.infer<typeof serviceCentersListResponseSchema>;
+export type CustomersListResponse = z.infer<typeof customersListResponseSchema>;
+export type VehiclesListResponse = z.infer<typeof vehiclesListResponseSchema>;
+export type WorkOrdersListResponse = z.infer<typeof workOrdersListResponseSchema>;
 
 export class ApiClient {
   private refreshPromise: Promise<RefreshResponse> | null = null;
@@ -184,6 +247,90 @@ export class ApiClient {
     });
   }
 
+  getStoMe(): Promise<StoMeResponse> {
+    return this.request('/api/sto/me', stoMeResponseSchema, {
+      auth: true,
+    });
+  }
+
+  listServiceCenters(): Promise<ServiceCentersListResponse> {
+    return this.request('/api/sto/service-centers', serviceCentersListResponseSchema, {
+      auth: true,
+    });
+  }
+
+  listCustomers(query: ListCustomersQuery = {}): Promise<CustomersListResponse> {
+    const parsed = listCustomersQuerySchema.parse(query);
+    return this.request(`/api/sto/customers${queryString(parsed)}`, customersListResponseSchema, {
+      auth: true,
+    });
+  }
+
+  createCustomer(input: CreateCustomerInput): Promise<CustomerDto> {
+    const payload = createCustomerInputSchema.parse(input);
+    return this.request('/api/sto/customers', customerSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  listVehicles(query: ListVehiclesQuery = {}): Promise<VehiclesListResponse> {
+    const parsed = listVehiclesQuerySchema.parse(query);
+    return this.request(`/api/sto/vehicles${queryString(parsed)}`, vehiclesListResponseSchema, {
+      auth: true,
+    });
+  }
+
+  createVehicle(input: CreateVehicleInput): Promise<VehicleDto> {
+    const payload = createVehicleInputSchema.parse(input);
+    return this.request('/api/sto/vehicles', vehicleSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  listWorkOrders(query: ListWorkOrdersQuery = {}): Promise<WorkOrdersListResponse> {
+    const parsed = listWorkOrdersQuerySchema.parse(query);
+    return this.request(`/api/sto/orders${queryString(parsed)}`, workOrdersListResponseSchema, {
+      auth: true,
+    });
+  }
+
+  getWorkOrder(id: string): Promise<WorkOrderDetailDto> {
+    return this.request(`/api/sto/orders/${encodeURIComponent(id)}`, workOrderDetailSchema, {
+      auth: true,
+    });
+  }
+
+  createWorkOrder(input: CreateWorkOrderInput): Promise<WorkOrderDetailDto> {
+    const payload = createWorkOrderInputSchema.parse(input);
+    return this.request('/api/sto/orders', workOrderDetailSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  updateWorkOrder(id: string, input: UpdateWorkOrderInput): Promise<WorkOrderDetailDto> {
+    const payload = updateWorkOrderInputSchema.parse(input);
+    return this.request(`/api/sto/orders/${encodeURIComponent(id)}`, workOrderDetailSchema, {
+      method: 'PATCH',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  changeWorkOrderStatus(id: string, input: ChangeWorkOrderStatusInput): Promise<WorkOrderDetailDto> {
+    const payload = changeWorkOrderStatusInputSchema.parse(input);
+    return this.request(`/api/sto/orders/${encodeURIComponent(id)}/status`, workOrderDetailSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
   async logout(input: LogoutRequest = {}) {
     const storedRefreshToken = await this.options.getRefreshToken();
     const payload = logoutRequestSchema.parse({
@@ -278,6 +425,8 @@ export class ApiClient {
   }
 }
 
+export type { StaffRole, WorkOrderDetailDto, WorkOrderListItemDto };
+
 async function toApiError(response: Response) {
   const fallbackMessage = `Request failed with status ${response.status}`;
 
@@ -287,4 +436,22 @@ async function toApiError(response: Response) {
   } catch {
     return new ApiRequestError(response.status, 'INTERNAL_ERROR', fallbackMessage);
   }
+}
+
+function queryString(query: Record<string, unknown>) {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === '') continue;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        params.append(key, String(item));
+      }
+    } else {
+      params.set(key, String(value));
+    }
+  }
+
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : '';
 }

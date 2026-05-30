@@ -3,42 +3,32 @@ import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
-import { useSubscriptionIap } from '@/lib/iap';
+import { getApiErrorMessage, roleLabels, useStoMe } from '@/lib/sto';
 
 export default function ProfileScreen() {
   const auth = useAuth();
-  const iap = useSubscriptionIap();
+  const stoMe = useStoMe();
 
   if (!auth.user) return null;
 
   return (
-    <Screen centered>
+    <Screen scroll>
       <PageHeader
-        eyebrow="Account"
-        title={auth.user.displayName ?? 'Profile'}
+        eyebrow="Профиль"
+        title={stoMe.data?.staffProfile.fullName ?? auth.user.displayName ?? 'Сотрудник'}
         description={auth.user.email}
       />
 
-      <KeyValueCard label="User ID" value={auth.user.id} />
-      <KeyValueCard label="Subscription" value={subscriptionLabel(auth.user.subscription.state)} />
+      <KeyValueCard label="Email" value={auth.user.email} />
+      <KeyValueCard label="Роль" value={stoMe.data ? roleLabels[stoMe.data.role] : 'Загрузка'} />
+      <KeyValueCard label="Организация" value={stoMe.data?.organization.name ?? '—'} />
+      <KeyValueCard label="Сервисный центр" value={stoMe.data?.serviceCenter?.name ?? 'Все центры'} />
 
-      {auth.user.subscription.platform === 'ios' ? (
-        <Button
-          disabled={!iap.isConnected || iap.isManagingSubscriptions}
-          loading={iap.isManagingSubscriptions}
-          variant="outline"
-          onPress={() => void iap.manageSubscriptions()}>
-          Manage subscription
-        </Button>
-      ) : null}
+      {stoMe.isError ? <KeyValueCard label="STO context" value={getApiErrorMessage(stoMe.error)} /> : null}
 
       <Button variant="outline" onPress={() => void auth.logout()}>
-        Logout
+        Выйти
       </Button>
     </Screen>
   );
-}
-
-function subscriptionLabel(state: string) {
-  return state.replaceAll('_', ' ');
 }

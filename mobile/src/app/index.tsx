@@ -19,7 +19,6 @@ import {
 import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { ScreenLoader } from '@/components/screen-states';
-import { SocialAuthButtons } from '@/components/social-auth-buttons';
 import { TEST_IDS } from '@/constants/testIds';
 import { ApiRequestError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -28,7 +27,7 @@ const isE2eMode = process.env.EXPO_PUBLIC_E2E === '1';
 
 export default function HomeScreen() {
   const auth = useAuth();
-  const [mode, setMode] = useState<AuthMode>('register');
+  const [mode, setMode] = useState<AuthMode>('login');
   const [error, setError] = useState<string | null>(null);
   const isRegister = mode === 'register';
 
@@ -68,7 +67,7 @@ export default function HomeScreen() {
   }
 
   if (auth.user) {
-    return <Redirect href={(auth.user.subscription.isActive ? '/components' : '/paywall') as Href} />;
+    return <Redirect href={'/orders' as Href} />;
   }
 
   return (
@@ -82,8 +81,9 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator: false,
       }}>
       <PageHeader
-        eyebrow="Golden path template"
-        title="Auth, Zod contracts, Query, and Form are ready."
+        eyebrow="СТО"
+        title="Вход для сотрудников"
+        description="Используй dev users после seed или рабочий аккаунт сотрудника."
         size="hero"
       />
 
@@ -156,12 +156,6 @@ export default function HomeScreen() {
             />
           )}
         </form.Subscribe>
-
-        <SocialAuthButtons
-          getDisplayName={() => (isRegister ? form.getFieldValue('displayName') : undefined)}
-          onAuthenticate={auth.socialAuth}
-          onError={setError}
-        />
       </AuthPanel>
     </Screen>
   );
