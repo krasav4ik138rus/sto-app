@@ -209,3 +209,9 @@ JSONB подходит, потому что:
 - поля могут меняться без миграции;
 - для отчетности важнее проблемные пункты, totals и статусы, а не каждая raw-колонка;
 - стабильные бизнес-сущности остаются нормализованными: заказ, клиент, авто, рекомендации, файлы, статусы, аудит.
+
+## Implementation Status
+
+Shared contracts and form templates are implemented in `packages/contracts/src/sto.ts` and `packages/contracts/src/stoForms.ts`.
+
+The first version includes `inspectionActTemplateV1` and `diagnosticTemplateV1`. Backend should validate incoming JSON payloads with the STO schemas before saving `InspectionAct.dataJson` and `Diagnostic.dataJson`; mobile should render the form UI from the shared templates.
