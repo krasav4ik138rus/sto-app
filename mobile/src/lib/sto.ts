@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CreateDiagnosticInput,
+  CreateRecommendationInput,
   PatchInspectionActInput,
   StaffRole,
+  UpdateRecommendationInput,
   UpdateDiagnosticInput,
   UpsertInspectionActInput,
   WorkOrderStatus,
@@ -19,6 +21,7 @@ export const stoQueryKeys = {
   inspection: (orderId: string) => ['sto', 'orders', orderId, 'inspection'] as const,
   diagnostics: (orderId: string) => ['sto', 'orders', orderId, 'diagnostics'] as const,
   diagnostic: (diagnosticId: string) => ['sto', 'diagnostics', diagnosticId] as const,
+  recommendations: (orderId: string) => ['sto', 'orders', orderId, 'recommendations'] as const,
   summary: (orderId: string) => ['sto', 'orders', orderId, 'summary'] as const,
   customers: (search?: string) => ['sto', 'customers', search ?? ''] as const,
   vehicles: (search?: string, customerId?: string | null) =>
@@ -143,6 +146,46 @@ export function useUpdateDiagnostic(diagnosticId: string | undefined, orderId?: 
   });
 }
 
+export function useRecommendations(orderId: string | undefined) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: stoQueryKeys.recommendations(orderId ?? ''),
+    enabled: auth.isAuthenticated && Boolean(orderId),
+    queryFn: () => auth.api.listRecommendations(orderId ?? ''),
+  });
+}
+
+export function useCreateRecommendation(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateRecommendationInput) => auth.api.createRecommendation(orderId, input),
+    onSuccess: async (recommendation) => {
+      await invalidateRecommendationState(queryClient, orderId, recommendation.id);
+    },
+  });
+}
+
+export function useUpdateRecommendation(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      recommendationId,
+      input,
+    }: {
+      recommendationId: string;
+      input: UpdateRecommendationInput;
+    }) => auth.api.updateRecommendation(recommendationId, input),
+    onSuccess: async (recommendation) => {
+      await invalidateRecommendationState(queryClient, orderId, recommendation.id);
+    },
+  });
+}
+
 export function useWorkOrderSummary(orderId: string | undefined) {
   const auth = useAuth();
 
@@ -173,6 +216,20 @@ async function invalidateDiagnosticState(
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.diagnostics(orderId) }),
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.diagnostic(diagnosticId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(orderId) }),
+    queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
+  ]);
+}
+
+async function invalidateRecommendationState(
+  queryClient: ReturnType<typeof useQueryClient>,
+  orderId: string,
+  recommendationId: string,
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.recommendations(orderId) }),
+    queryClient.invalidateQueries({ queryKey: ['sto', 'recommendations', recommendationId] }),
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(orderId) }),
     queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),

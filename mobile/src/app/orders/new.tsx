@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CreateWorkOrderInput } from '@autoservice-app/contracts';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
@@ -41,9 +42,16 @@ export default function NewOrderScreen() {
     queryFn: () => auth.api.listVehicles({ limit: 20, customerId: selectedCustomerId ?? undefined }),
   });
 
-  const createOrder = useMutation({
-    mutationFn: () =>
-      auth.api.createWorkOrder({
+  const buildCreateOrderInput = (): CreateWorkOrderInput => {
+    const parsedMileage = parseOptionalNonNegativeInt(mileage, 'Пробег');
+    const parsedYear = parseOptionalYear(year);
+    const vehicleBrandModel = brandModel.trim();
+
+    if (!selectedVehicleId && !vehicleBrandModel) {
+      throw new Error('Укажите марку и модель автомобиля.');
+    }
+
+    return {
         ...(number.trim() ? { number: number.trim() } : {}),
         ...(selectedCustomerId
           ? { customerId: selectedCustomerId }
@@ -54,17 +62,21 @@ export default function NewOrderScreen() {
           ? { vehicleId: selectedVehicleId }
           : {
               vehicle: {
-                brandModel: brandModel.trim(),
+                brandModel: vehicleBrandModel,
                 vin: vin.trim() || undefined,
                 plate: plate.trim() || undefined,
                 engineSpec: engineSpec.trim() || undefined,
-                year: parseOptionalInt(year),
-                currentMileage: parseOptionalInt(mileage),
+                year: parsedYear,
+                currentMileage: parsedMileage,
               },
             }),
-        mileage: parseOptionalInt(mileage),
+        mileage: parsedMileage,
         visitReason: visitReason.trim() || undefined,
-      }),
+      };
+  };
+
+  const createOrder = useMutation({
+    mutationFn: () => auth.api.createWorkOrder(buildCreateOrderInput()),
     onSuccess: async (order) => {
       await queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] });
       Alert.alert('Заказ создан', order.number);
@@ -197,11 +209,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function parseOptionalInt(value: string) {
+function parseOptionalNonNegativeInt(value: string, label: string) {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(`${label}: укажите целое число без пробелов и букв.`);
+  }
   const parsed = Number.parseInt(trimmed, 10);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`${label}: число должно быть не меньше 0.`);
+  }
+  return parsed;
+}
+
+function parseOptionalYear(value: string) {
+  const parsed = parseOptionalNonNegativeInt(value, 'Год');
+  if (parsed === undefined) return undefined;
+  if (parsed < 1886 || parsed > 2200) {
+    throw new Error('Год: укажите значение от 1886 до 2200.');
+  }
+  return parsed;
 }
 
 const styles = StyleSheet.create({
