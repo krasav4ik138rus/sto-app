@@ -22,6 +22,7 @@ model User {
   pushTokens              PushToken[]
   pushNotificationOutbox  PushNotificationOutbox[]
   pushDeliveries          PushDelivery[]
+  staffProfile            StaffProfile?
 
   @@map("users")
 }
@@ -216,4 +217,356 @@ model PushDelivery {
   @@index([status, receiptNextCheckAt], map: "push_deliveries_status_receipt_next_check_at_idx")
   @@index([userId, createdAt], map: "push_deliveries_user_id_created_at_idx")
   @@map("push_deliveries")
+}
+
+enum StaffRole {
+  MECHANIC
+  MASTER
+  DIRECTOR
+  ADMIN
+
+  @@map("staff_role")
+}
+
+enum WorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  AWAITING_APPROVAL
+  APPROVED
+  COMPLETED
+  CLOSED
+  CANCELLED
+
+  @@map("work_order_status")
+}
+
+enum RecommendationStatus {
+  SUGGESTED
+  APPROVED
+  DECLINED
+  DONE
+
+  @@map("recommendation_status")
+}
+
+enum AttachmentType {
+  PHOTO
+  DOCUMENT
+  VIDEO
+
+  @@map("attachment_type")
+}
+
+enum AttachmentVisibility {
+  INTERNAL
+  CUSTOMER_VISIBLE
+
+  @@map("attachment_visibility")
+}
+
+model Organization {
+  id             String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name           String
+  slug           String                   @unique
+  timezone       String                   @default("Europe/Moscow")
+  isActive       Boolean                  @default(true) @map("is_active")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  serviceCenters ServiceCenter[]
+  staffProfiles  StaffProfile[]
+  customers      Customer[]
+  vehicles       Vehicle[]
+  workOrders     WorkOrder[]
+  statusHistory  WorkOrderStatusHistory[]
+  inspectionActs InspectionAct[]
+  diagnostics    Diagnostic[]
+  recommendations Recommendation[]
+  attachments    OrderAttachment[]
+  auditLogs      AuditLog[]
+
+  @@map("organizations")
+}
+
+model ServiceCenter {
+  id             String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  name           String
+  address        String?
+  phone          String?
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "service_centers_organization_id_fkey")
+  staffProfiles  StaffProfile[]
+  workOrders     WorkOrder[]
+
+  @@index([organizationId], map: "service_centers_organization_id_idx")
+  @@index([organizationId, name], map: "service_centers_organization_id_name_idx")
+  @@map("service_centers")
+}
+
+model StaffProfile {
+  id                         String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId                     String                   @unique @map("user_id") @db.Uuid
+  organizationId             String                   @map("organization_id") @db.Uuid
+  serviceCenterId            String?                  @map("service_center_id") @db.Uuid
+  fullName                   String?                  @map("full_name")
+  phone                      String?
+  role                       StaffRole
+  isActive                   Boolean                  @default(true) @map("is_active")
+  createdAt                  DateTime                 @default(now()) @map("created_at")
+  updatedAt                  DateTime                 @updatedAt @map("updated_at")
+  user                       User                     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "staff_profiles_user_id_fkey")
+  organization               Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "staff_profiles_organization_id_fkey")
+  serviceCenter              ServiceCenter?           @relation(fields: [serviceCenterId], references: [id], onDelete: SetNull, map: "staff_profiles_service_center_id_fkey")
+  createdWorkOrders          WorkOrder[]              @relation("WorkOrderCreatedBy")
+  responsibleWorkOrders      WorkOrder[]              @relation("WorkOrderResponsible")
+  statusChanges              WorkOrderStatusHistory[]
+  inspectionActsCreated      InspectionAct[]          @relation("InspectionActCreatedBy")
+  inspectionActsUpdated      InspectionAct[]          @relation("InspectionActUpdatedBy")
+  diagnosticsCreated         Diagnostic[]             @relation("DiagnosticCreatedBy")
+  diagnosticsUpdated         Diagnostic[]             @relation("DiagnosticUpdatedBy")
+  diagnosticsExecuted        Diagnostic[]             @relation("DiagnosticExecutor")
+  recommendationsCreated     Recommendation[]         @relation("RecommendationCreatedBy")
+  recommendationsUpdated     Recommendation[]         @relation("RecommendationUpdatedBy")
+  attachmentsCreated         OrderAttachment[]        @relation("OrderAttachmentCreatedBy")
+  auditLogs                  AuditLog[]
+
+  @@index([organizationId, role], map: "staff_profiles_organization_id_role_idx")
+  @@index([serviceCenterId], map: "staff_profiles_service_center_id_idx")
+  @@map("staff_profiles")
+}
+
+model Customer {
+  id             String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  name           String?
+  phone          String?
+  email          String?
+  notes          String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "customers_organization_id_fkey")
+  vehicles       Vehicle[]
+  workOrders     WorkOrder[]
+
+  @@index([organizationId, phone], map: "customers_organization_id_phone_idx")
+  @@index([organizationId, name], map: "customers_organization_id_name_idx")
+  @@map("customers")
+}
+
+model Vehicle {
+  id             String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  customerId     String?       @map("customer_id") @db.Uuid
+  brand          String?
+  model          String?
+  brandModel     String        @map("brand_model")
+  vin            String?
+  plate          String?
+  engineSpec     String?       @map("engine_spec")
+  year           Int?
+  currentMileage Int?          @map("current_mileage")
+  notes          String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "vehicles_organization_id_fkey")
+  customer       Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull, map: "vehicles_customer_id_fkey")
+  workOrders     WorkOrder[]
+
+  @@index([organizationId, vin], map: "vehicles_organization_id_vin_idx")
+  @@index([organizationId, plate], map: "vehicles_organization_id_plate_idx")
+  @@index([customerId], map: "vehicles_customer_id_idx")
+  @@map("vehicles")
+}
+
+model WorkOrder {
+  id                        String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId            String                   @map("organization_id") @db.Uuid
+  serviceCenterId           String?                  @map("service_center_id") @db.Uuid
+  customerId                String?                  @map("customer_id") @db.Uuid
+  vehicleId                 String                   @map("vehicle_id") @db.Uuid
+  number                    String
+  status                    WorkOrderStatus          @default(OPEN)
+  visitReason               String?                  @map("visit_reason")
+  mileage                   Int?
+  responsibleStaffProfileId String?                  @map("responsible_staff_profile_id") @db.Uuid
+  createdByStaffProfileId   String                   @map("created_by_staff_profile_id") @db.Uuid
+  closedAt                  DateTime?                @map("closed_at")
+  createdAt                 DateTime                 @default(now()) @map("created_at")
+  updatedAt                 DateTime                 @updatedAt @map("updated_at")
+  organization              Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "work_orders_organization_id_fkey")
+  serviceCenter             ServiceCenter?           @relation(fields: [serviceCenterId], references: [id], onDelete: SetNull, map: "work_orders_service_center_id_fkey")
+  customer                  Customer?                @relation(fields: [customerId], references: [id], onDelete: SetNull, map: "work_orders_customer_id_fkey")
+  vehicle                   Vehicle                  @relation(fields: [vehicleId], references: [id], onDelete: Restrict, map: "work_orders_vehicle_id_fkey")
+  responsibleStaffProfile   StaffProfile?            @relation("WorkOrderResponsible", fields: [responsibleStaffProfileId], references: [id], onDelete: SetNull, map: "work_orders_responsible_staff_profile_id_fkey")
+  createdByStaffProfile     StaffProfile             @relation("WorkOrderCreatedBy", fields: [createdByStaffProfileId], references: [id], onDelete: Restrict, map: "work_orders_created_by_staff_profile_id_fkey")
+  statusHistory             WorkOrderStatusHistory[]
+  inspectionAct             InspectionAct?
+  diagnostics               Diagnostic[]
+  recommendations           Recommendation[]
+  attachments               OrderAttachment[]
+
+  @@unique([organizationId, number], map: "work_orders_organization_id_number_key")
+  @@index([organizationId, status], map: "work_orders_organization_id_status_idx")
+  @@index([organizationId, createdAt], map: "work_orders_organization_id_created_at_idx")
+  @@index([serviceCenterId, status], map: "work_orders_service_center_id_status_idx")
+  @@index([customerId], map: "work_orders_customer_id_idx")
+  @@index([vehicleId], map: "work_orders_vehicle_id_idx")
+  @@index([responsibleStaffProfileId], map: "work_orders_responsible_staff_profile_id_idx")
+  @@map("work_orders")
+}
+
+model WorkOrderStatusHistory {
+  id                      String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId          String          @map("organization_id") @db.Uuid
+  workOrderId             String          @map("work_order_id") @db.Uuid
+  fromStatus              WorkOrderStatus? @map("from_status")
+  toStatus                WorkOrderStatus @map("to_status")
+  comment                 String?
+  changedByStaffProfileId String          @map("changed_by_staff_profile_id") @db.Uuid
+  createdAt               DateTime        @default(now()) @map("created_at")
+  organization            Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "work_order_status_history_organization_id_fkey")
+  workOrder               WorkOrder       @relation(fields: [workOrderId], references: [id], onDelete: Cascade, map: "work_order_status_history_work_order_id_fkey")
+  changedByStaffProfile   StaffProfile    @relation(fields: [changedByStaffProfileId], references: [id], onDelete: Restrict, map: "work_order_status_history_changed_by_staff_profile_id_fkey")
+
+  @@index([organizationId, createdAt], map: "work_order_status_history_organization_id_created_at_idx")
+  @@index([workOrderId, createdAt], map: "work_order_status_history_work_order_id_created_at_idx")
+  @@index([changedByStaffProfileId], map: "work_order_status_history_changed_by_staff_profile_id_idx")
+  @@map("work_order_status_history")
+}
+
+model InspectionAct {
+  id                       String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId           String            @map("organization_id") @db.Uuid
+  workOrderId              String            @unique @map("work_order_id") @db.Uuid
+  dataJson                 Json              @map("data_json")
+  schemaVersion            Int               @default(1) @map("schema_version")
+  completedAt              DateTime?         @map("completed_at")
+  createdByStaffProfileId  String            @map("created_by_staff_profile_id") @db.Uuid
+  updatedByStaffProfileId  String?           @map("updated_by_staff_profile_id") @db.Uuid
+  createdAt                DateTime          @default(now()) @map("created_at")
+  updatedAt                DateTime          @updatedAt @map("updated_at")
+  organization             Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "inspection_acts_organization_id_fkey")
+  workOrder                WorkOrder         @relation(fields: [workOrderId], references: [id], onDelete: Cascade, map: "inspection_acts_work_order_id_fkey")
+  createdByStaffProfile    StaffProfile      @relation("InspectionActCreatedBy", fields: [createdByStaffProfileId], references: [id], onDelete: Restrict, map: "inspection_acts_created_by_staff_profile_id_fkey")
+  updatedByStaffProfile    StaffProfile?     @relation("InspectionActUpdatedBy", fields: [updatedByStaffProfileId], references: [id], onDelete: SetNull, map: "inspection_acts_updated_by_staff_profile_id_fkey")
+  recommendations          Recommendation[]
+  attachments              OrderAttachment[]
+
+  @@index([organizationId, createdAt], map: "inspection_acts_organization_id_created_at_idx")
+  @@index([createdByStaffProfileId], map: "inspection_acts_created_by_staff_profile_id_idx")
+  @@map("inspection_acts")
+}
+
+model Diagnostic {
+  id                       String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId           String            @map("organization_id") @db.Uuid
+  workOrderId              String            @map("work_order_id") @db.Uuid
+  dataJson                 Json              @map("data_json")
+  schemaVersion            Int               @default(1) @map("schema_version")
+  otherRecommendations     String?           @map("other_recommendations")
+  alignmentComment         String?           @map("alignment_comment")
+  partsTotal               Decimal?          @map("parts_total") @db.Decimal(12, 2)
+  serviceTotal             Decimal?          @map("service_total") @db.Decimal(12, 2)
+  grandTotal               Decimal?          @map("grand_total") @db.Decimal(12, 2)
+  executorStaffProfileId   String?           @map("executor_staff_profile_id") @db.Uuid
+  createdByStaffProfileId  String            @map("created_by_staff_profile_id") @db.Uuid
+  updatedByStaffProfileId  String?           @map("updated_by_staff_profile_id") @db.Uuid
+  createdAt                DateTime          @default(now()) @map("created_at")
+  updatedAt                DateTime          @updatedAt @map("updated_at")
+  organization             Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "diagnostics_organization_id_fkey")
+  workOrder                WorkOrder         @relation(fields: [workOrderId], references: [id], onDelete: Cascade, map: "diagnostics_work_order_id_fkey")
+  executorStaffProfile     StaffProfile?     @relation("DiagnosticExecutor", fields: [executorStaffProfileId], references: [id], onDelete: SetNull, map: "diagnostics_executor_staff_profile_id_fkey")
+  createdByStaffProfile    StaffProfile      @relation("DiagnosticCreatedBy", fields: [createdByStaffProfileId], references: [id], onDelete: Restrict, map: "diagnostics_created_by_staff_profile_id_fkey")
+  updatedByStaffProfile    StaffProfile?     @relation("DiagnosticUpdatedBy", fields: [updatedByStaffProfileId], references: [id], onDelete: SetNull, map: "diagnostics_updated_by_staff_profile_id_fkey")
+  recommendations          Recommendation[]
+  attachments              OrderAttachment[]
+
+  @@index([organizationId, createdAt], map: "diagnostics_organization_id_created_at_idx")
+  @@index([workOrderId, createdAt], map: "diagnostics_work_order_id_created_at_idx")
+  @@index([executorStaffProfileId], map: "diagnostics_executor_staff_profile_id_idx")
+  @@map("diagnostics")
+}
+
+model Recommendation {
+  id                       String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId           String               @map("organization_id") @db.Uuid
+  workOrderId              String               @map("work_order_id") @db.Uuid
+  diagnosticId             String?              @map("diagnostic_id") @db.Uuid
+  inspectionActId          String?              @map("inspection_act_id") @db.Uuid
+  text                     String
+  status                   RecommendationStatus @default(SUGGESTED)
+  partsPrice               Decimal?             @map("parts_price") @db.Decimal(12, 2)
+  servicePrice             Decimal?             @map("service_price") @db.Decimal(12, 2)
+  totalPrice               Decimal?             @map("total_price") @db.Decimal(12, 2)
+  createdByStaffProfileId  String               @map("created_by_staff_profile_id") @db.Uuid
+  updatedByStaffProfileId  String?              @map("updated_by_staff_profile_id") @db.Uuid
+  createdAt                DateTime             @default(now()) @map("created_at")
+  updatedAt                DateTime             @updatedAt @map("updated_at")
+  organization             Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "recommendations_organization_id_fkey")
+  workOrder                WorkOrder            @relation(fields: [workOrderId], references: [id], onDelete: Cascade, map: "recommendations_work_order_id_fkey")
+  diagnostic               Diagnostic?          @relation(fields: [diagnosticId], references: [id], onDelete: SetNull, map: "recommendations_diagnostic_id_fkey")
+  inspectionAct            InspectionAct?       @relation(fields: [inspectionActId], references: [id], onDelete: SetNull, map: "recommendations_inspection_act_id_fkey")
+  createdByStaffProfile    StaffProfile         @relation("RecommendationCreatedBy", fields: [createdByStaffProfileId], references: [id], onDelete: Restrict, map: "recommendations_created_by_staff_profile_id_fkey")
+  updatedByStaffProfile    StaffProfile?        @relation("RecommendationUpdatedBy", fields: [updatedByStaffProfileId], references: [id], onDelete: SetNull, map: "recommendations_updated_by_staff_profile_id_fkey")
+  attachments              OrderAttachment[]
+
+  @@index([organizationId, status], map: "recommendations_organization_id_status_idx")
+  @@index([workOrderId, status], map: "recommendations_work_order_id_status_idx")
+  @@index([diagnosticId], map: "recommendations_diagnostic_id_idx")
+  @@index([inspectionActId], map: "recommendations_inspection_act_id_idx")
+  @@map("recommendations")
+}
+
+model OrderAttachment {
+  id                      String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId          String               @map("organization_id") @db.Uuid
+  workOrderId             String               @map("work_order_id") @db.Uuid
+  inspectionActId         String?              @map("inspection_act_id") @db.Uuid
+  diagnosticId            String?              @map("diagnostic_id") @db.Uuid
+  recommendationId        String?              @map("recommendation_id") @db.Uuid
+  type                    AttachmentType
+  visibility              AttachmentVisibility @default(INTERNAL)
+  storageKey              String               @map("storage_key")
+  fileUrl                 String?              @map("file_url")
+  originalFilename        String?              @map("original_filename")
+  mimeType                String?              @map("mime_type")
+  byteSize                Int?                 @map("byte_size")
+  caption                 String?
+  createdByStaffProfileId String               @map("created_by_staff_profile_id") @db.Uuid
+  createdAt               DateTime             @default(now()) @map("created_at")
+  deletedAt               DateTime?            @map("deleted_at")
+  organization            Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade, map: "order_attachments_organization_id_fkey")
+  workOrder               WorkOrder            @relation(fields: [workOrderId], references: [id], onDelete: Cascade, map: "order_attachments_work_order_id_fkey")
+  inspectionAct           InspectionAct?       @relation(fields: [inspectionActId], references: [id], onDelete: SetNull, map: "order_attachments_inspection_act_id_fkey")
+  diagnostic              Diagnostic?          @relation(fields: [diagnosticId], references: [id], onDelete: SetNull, map: "order_attachments_diagnostic_id_fkey")
+  recommendation          Recommendation?      @relation(fields: [recommendationId], references: [id], onDelete: SetNull, map: "order_attachments_recommendation_id_fkey")
+  createdByStaffProfile   StaffProfile         @relation("OrderAttachmentCreatedBy", fields: [createdByStaffProfileId], references: [id], onDelete: Restrict, map: "order_attachments_created_by_staff_profile_id_fkey")
+
+  @@index([organizationId, createdAt], map: "order_attachments_organization_id_created_at_idx")
+  @@index([workOrderId, createdAt], map: "order_attachments_work_order_id_created_at_idx")
+  @@index([inspectionActId], map: "order_attachments_inspection_act_id_idx")
+  @@index([diagnosticId], map: "order_attachments_diagnostic_id_idx")
+  @@index([recommendationId], map: "order_attachments_recommendation_id_idx")
+  @@index([createdByStaffProfileId], map: "order_attachments_created_by_staff_profile_id_idx")
+  @@map("order_attachments")
+}
+
+model AuditLog {
+  id             String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
+  staffProfileId String?       @map("staff_profile_id") @db.Uuid
+  entityType     String        @map("entity_type")
+  entityId       String        @map("entity_id")
+  action         String
+  payloadJson    Json?         @map("payload_json")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull, map: "audit_logs_organization_id_fkey")
+  staffProfile   StaffProfile? @relation(fields: [staffProfileId], references: [id], onDelete: SetNull, map: "audit_logs_staff_profile_id_fkey")
+
+  @@index([organizationId, createdAt], map: "audit_logs_organization_id_created_at_idx")
+  @@index([entityType, entityId], map: "audit_logs_entity_type_entity_id_idx")
+  @@index([staffProfileId, createdAt], map: "audit_logs_staff_profile_id_created_at_idx")
+  @@map("audit_logs")
 }
