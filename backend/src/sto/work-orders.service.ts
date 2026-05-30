@@ -39,28 +39,23 @@ const workOrderDetailInclude = {
       createdAt: 'asc' as const,
     },
   },
-  inspectionAct: {
-    select: {
-      id: true,
-    },
-  },
+  inspectionAct: true,
   diagnostics: {
-    select: {
-      id: true,
+    orderBy: {
+      createdAt: 'desc' as const,
     },
   },
   recommendations: {
-    select: {
-      id: true,
-      status: true,
+    orderBy: {
+      createdAt: 'desc' as const,
     },
   },
   attachments: {
     where: {
       deletedAt: null,
     },
-    select: {
-      id: true,
+    orderBy: {
+      createdAt: 'desc' as const,
     },
   },
 } as const

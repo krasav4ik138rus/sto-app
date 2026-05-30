@@ -276,6 +276,32 @@ export const workOrderSummarySchema = z.object({
   partsTotal: moneyOutputSchema,
   serviceTotal: moneyOutputSchema,
   grandTotal: moneyOutputSchema,
+  order: workOrderSchema.optional(),
+  serviceCenter: serviceCenterSchema.nullable().optional(),
+  customer: customerSchema.nullable().optional(),
+  vehicle: vehicleSchema.optional(),
+  inspectionProblemItems: z
+    .array(
+      z.object({
+        fieldKey: z.string(),
+        value: inspectionConditionSchema,
+      }),
+    )
+    .optional(),
+  diagnosticProblemItems: z
+    .array(
+      z.object({
+        diagnosticId: idSchema,
+        fieldKey: z.string(),
+        side: z.enum(['none', 'left', 'right']),
+        status: diagnosticStatusSchema,
+        partsPrice: moneyOutputSchema,
+        servicePrice: moneyOutputSchema,
+        comment: nullableStringSchema,
+      }),
+    )
+    .optional(),
+  recommendations: z.array(recommendationSchema).optional(),
 })
 
 export const workOrderDetailSchema = workOrderSchema.extend({
@@ -484,6 +510,29 @@ export const listAttachmentsQuerySchema = paginationQuerySchema.extend({
   sort: z.enum(['created_desc', 'created_asc']).optional(),
 })
 
+export const inspectionActResponseSchema = z.object({
+  orderId: idSchema,
+  inspectionAct: inspectionActSchema.nullable(),
+})
+
+export const diagnosticsListResponseSchema = z.object({
+  items: z.array(diagnosticSchema),
+})
+
+export const recommendationsListResponseSchema = z.object({
+  items: z.array(recommendationSchema),
+  nextCursor: z.string().nullable().optional(),
+})
+
+export const attachmentsListResponseSchema = z.object({
+  items: z.array(orderAttachmentSchema),
+  nextCursor: z.string().nullable().optional(),
+})
+
+export const attachmentDeleteResponseSchema = z.object({
+  ok: z.literal(true),
+})
+
 export const listStaffProfilesQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(200).optional(),
   role: z.union([staffRoleSchema, z.array(staffRoleSchema)]).optional(),
@@ -523,6 +572,10 @@ export type RecommendationDto = z.infer<typeof recommendationSchema>
 export type OrderAttachmentDto = z.infer<typeof orderAttachmentSchema>
 export type AuditLogDto = z.infer<typeof auditLogSchema>
 export type WorkOrderSummaryDto = z.infer<typeof workOrderSummarySchema>
+export type InspectionActResponse = z.infer<typeof inspectionActResponseSchema>
+export type DiagnosticsListResponse = z.infer<typeof diagnosticsListResponseSchema>
+export type RecommendationsListResponse = z.infer<typeof recommendationsListResponseSchema>
+export type AttachmentsListResponse = z.infer<typeof attachmentsListResponseSchema>
 
 export type CreateCustomerInput = z.input<typeof createCustomerInputSchema>
 export type UpdateCustomerInput = z.input<typeof updateCustomerInputSchema>

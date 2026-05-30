@@ -66,6 +66,10 @@ export function getApiErrorMessage(error: unknown) {
     return error.message;
   }
 
+  if (error instanceof Error) {
+    return error.message;
+  }
+
   return 'Не удалось выполнить запрос. Проверь backend и сеть.';
 }
 

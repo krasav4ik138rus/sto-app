@@ -1,14 +1,23 @@
 import {
   changeWorkOrderStatusInputSchema,
+  createAttachmentMetadataInputSchema,
   createCustomerInputSchema,
+  createDiagnosticInputSchema,
+  createRecommendationInputSchema,
   createVehicleInputSchema,
   createWorkOrderInputSchema,
+  listAttachmentsQuerySchema,
   listCustomersQuerySchema,
+  listRecommendationsQuerySchema,
   listVehiclesQuerySchema,
   listWorkOrdersQuerySchema,
+  patchInspectionActInputSchema,
+  updateDiagnosticInputSchema,
+  updateRecommendationInputSchema,
   updateCustomerInputSchema,
   updateVehicleInputSchema,
   updateWorkOrderInputSchema,
+  upsertInspectionActInputSchema,
 } from '@autoservice-app/contracts'
 import { Hono } from 'hono'
 import type { Context } from 'hono'
@@ -16,6 +25,11 @@ import { z } from 'zod'
 
 import type { AppBindings } from '../app'
 import { AppError } from '../http/errors'
+import { AttachmentsService } from './attachments.service'
+import { DiagnosticsService } from './diagnostics.service'
+import { InspectionService } from './inspection.service'
+import { RecommendationsService } from './recommendations.service'
+import { SummaryService } from './summary.service'
 import { getStoContext } from './sto-context'
 import { CustomersService } from './customers.service'
 import { toOrganizationDto, toServiceCenterDto, toStaffProfileDto } from './sto-mappers'
@@ -24,6 +38,18 @@ import { WorkOrdersService } from './work-orders.service'
 
 const idParamsSchema = z.object({
   id: z.string().min(1),
+})
+
+const diagnosticIdParamsSchema = z.object({
+  diagnosticId: z.string().min(1),
+})
+
+const recommendationIdParamsSchema = z.object({
+  recommendationId: z.string().min(1),
+})
+
+const attachmentIdParamsSchema = z.object({
+  attachmentId: z.string().min(1),
 })
 
 export function createStoRoutes() {
@@ -173,6 +199,166 @@ export function createStoRoutes() {
       ),
       200,
     )
+  })
+
+  routes.get('/orders/:id/inspection', async (c) => {
+    const context = await getStoContext(c)
+    const service = new InspectionService(c.get('prisma'))
+    return c.json(await service.get(context, idParamsSchema.parse(c.req.param()).id), 200)
+  })
+
+  routes.put('/orders/:id/inspection', async (c) => {
+    const context = await getStoContext(c)
+    const service = new InspectionService(c.get('prisma'))
+    return c.json(
+      await service.upsert(
+        context,
+        idParamsSchema.parse(c.req.param()).id,
+        upsertInspectionActInputSchema.parse(await jsonBody(c)),
+      ),
+      200,
+    )
+  })
+
+  routes.patch('/orders/:id/inspection', async (c) => {
+    const context = await getStoContext(c)
+    const service = new InspectionService(c.get('prisma'))
+    return c.json(
+      await service.patch(
+        context,
+        idParamsSchema.parse(c.req.param()).id,
+        patchInspectionActInputSchema.parse(await jsonBody(c)),
+      ),
+      200,
+    )
+  })
+
+  routes.get('/orders/:id/diagnostics', async (c) => {
+    const context = await getStoContext(c)
+    const service = new DiagnosticsService(c.get('prisma'))
+    return c.json(await service.list(context, idParamsSchema.parse(c.req.param()).id), 200)
+  })
+
+  routes.post('/orders/:id/diagnostics', async (c) => {
+    const context = await getStoContext(c)
+    const service = new DiagnosticsService(c.get('prisma'))
+    return c.json(
+      await service.create(
+        context,
+        idParamsSchema.parse(c.req.param()).id,
+        createDiagnosticInputSchema.parse(await jsonBody(c)),
+      ),
+      201,
+    )
+  })
+
+  routes.get('/diagnostics/:diagnosticId', async (c) => {
+    const context = await getStoContext(c)
+    const service = new DiagnosticsService(c.get('prisma'))
+    return c.json(await service.get(context, diagnosticIdParamsSchema.parse(c.req.param()).diagnosticId), 200)
+  })
+
+  routes.put('/diagnostics/:diagnosticId', async (c) => {
+    const context = await getStoContext(c)
+    const service = new DiagnosticsService(c.get('prisma'))
+    return c.json(
+      await service.update(
+        context,
+        diagnosticIdParamsSchema.parse(c.req.param()).diagnosticId,
+        updateDiagnosticInputSchema.parse(await jsonBody(c)),
+      ),
+      200,
+    )
+  })
+
+  routes.patch('/diagnostics/:diagnosticId', async (c) => {
+    const context = await getStoContext(c)
+    const service = new DiagnosticsService(c.get('prisma'))
+    return c.json(
+      await service.update(
+        context,
+        diagnosticIdParamsSchema.parse(c.req.param()).diagnosticId,
+        updateDiagnosticInputSchema.parse(await jsonBody(c)),
+      ),
+      200,
+    )
+  })
+
+  routes.get('/orders/:id/recommendations', async (c) => {
+    const context = await getStoContext(c)
+    const service = new RecommendationsService(c.get('prisma'))
+    return c.json(
+      await service.list(
+        context,
+        idParamsSchema.parse(c.req.param()).id,
+        listRecommendationsQuerySchema.parse(c.req.query()),
+      ),
+      200,
+    )
+  })
+
+  routes.post('/orders/:id/recommendations', async (c) => {
+    const context = await getStoContext(c)
+    const service = new RecommendationsService(c.get('prisma'))
+    return c.json(
+      await service.create(
+        context,
+        idParamsSchema.parse(c.req.param()).id,
+        createRecommendationInputSchema.parse(await jsonBody(c)),
+      ),
+      201,
+    )
+  })
+
+  routes.patch('/recommendations/:recommendationId', async (c) => {
+    const context = await getStoContext(c)
+    const service = new RecommendationsService(c.get('prisma'))
+    return c.json(
+      await service.update(
+        context,
+        recommendationIdParamsSchema.parse(c.req.param()).recommendationId,
+        updateRecommendationInputSchema.parse(await jsonBody(c)),
+      ),
+      200,
+    )
+  })
+
+  routes.get('/orders/:id/attachments', async (c) => {
+    const context = await getStoContext(c)
+    const service = new AttachmentsService(c.get('prisma'))
+    return c.json(
+      await service.list(
+        context,
+        idParamsSchema.parse(c.req.param()).id,
+        listAttachmentsQuerySchema.parse(c.req.query()),
+      ),
+      200,
+    )
+  })
+
+  routes.post('/orders/:id/attachments', async (c) => {
+    const context = await getStoContext(c)
+    const service = new AttachmentsService(c.get('prisma'))
+    return c.json(
+      await service.create(
+        context,
+        idParamsSchema.parse(c.req.param()).id,
+        createAttachmentMetadataInputSchema.parse(await jsonBody(c)),
+      ),
+      201,
+    )
+  })
+
+  routes.delete('/attachments/:attachmentId', async (c) => {
+    const context = await getStoContext(c)
+    const service = new AttachmentsService(c.get('prisma'))
+    return c.json(await service.delete(context, attachmentIdParamsSchema.parse(c.req.param()).attachmentId), 200)
+  })
+
+  routes.get('/orders/:id/summary', async (c) => {
+    const context = await getStoContext(c)
+    const service = new SummaryService(c.get('prisma'))
+    return c.json(await service.get(context, idParamsSchema.parse(c.req.param()).id), 200)
   })
 
   return routes
