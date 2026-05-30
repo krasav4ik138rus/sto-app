@@ -4,7 +4,13 @@ This document describes quick local checks for the first STO backend API slice.
 
 ## Start Backend
 
-From the project root:
+From the project root, seed local STO demo data first:
+
+```powershell
+bun run --cwd backend seed:sto
+```
+
+Then start the backend:
 
 ```powershell
 bun run --cwd backend dev
@@ -24,9 +30,9 @@ Expected:
 
 ## Auth Token
 
-The STO endpoints require an auth user with an attached `StaffProfile`. Until seed/dev data is added, a normal auth user without `StaffProfile` should receive `403 STO_STAFF_PROFILE_REQUIRED`.
+The STO endpoints require an auth user with an attached `StaffProfile`. The local seed creates demo staff users.
 
-Login placeholder:
+Login as a dev admin user:
 
 ```powershell
 $login = Invoke-RestMethod `
@@ -35,7 +41,7 @@ $login = Invoke-RestMethod `
   -Headers @{ "Content-Type" = "application/json"; "X-Client-Platform" = "mobile" } `
   -Body (@{
     email = "admin@example.com"
-    password = "change-me"
+    password = "DevPassword123!"
   } | ConvertTo-Json)
 
 $token = $login.accessToken
@@ -57,6 +63,12 @@ Service centers:
 
 ```powershell
 Invoke-RestMethod -Method Get -Uri http://localhost:3000/api/sto/service-centers -Headers $headers
+```
+
+Orders from seed:
+
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/sto/orders?limit=20" -Headers $headers
 ```
 
 Customers:
@@ -109,6 +121,24 @@ $order = Invoke-RestMethod `
 Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/sto/orders/$($order.id)" -Headers $headers
 ```
 
+Create a new order from seeded customer and vehicle:
+
+```powershell
+$customers = Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/sto/customers?search=Иван" -Headers $headers
+$vehicles = Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/sto/vehicles?search=Toyota" -Headers $headers
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:3000/api/sto/orders `
+  -Headers $headers `
+  -Body (@{
+    customerId = $customers.items[0].id
+    vehicleId = $vehicles.items[0].id
+    visitReason = "Local smoke order"
+    mileage = 153000
+  } | ConvertTo-Json)
+```
+
 Change status:
 
 ```powershell
@@ -131,6 +161,23 @@ Invoke-RestMethod `
   -Headers $headers `
   -Body (@{
     visitReason = "Диагностика ходовой и тормозов"
+  } | ConvertTo-Json)
+```
+
+## Cookie Session Variant
+
+Mobile checks normally use the bearer token returned by `/api/auth/login`. For browser cookie checks, keep a PowerShell web session:
+
+```powershell
+$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:3000/api/auth/login `
+  -WebSession $session `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body (@{
+    email = "admin@example.com"
+    password = "DevPassword123!"
   } | ConvertTo-Json)
 ```
 
