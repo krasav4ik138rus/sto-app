@@ -10,6 +10,7 @@ import { Prisma } from '../generated/prisma/client'
 import type { WorkOrderStatus } from '../generated/prisma/enums'
 import { AppError } from '../http/errors'
 import {
+  getAllowedWorkOrderStatusTargets,
   requireCanChangeWorkOrderStatus,
   requireCanEditWorkOrder,
   requireCanReadWorkOrder,
@@ -168,6 +169,20 @@ export class WorkOrdersService {
     if (!workOrder) throw new AppError(404, 'NOT_FOUND', 'Work order not found')
     requireCanReadWorkOrder(context, workOrder)
     return toWorkOrderDetailDto(workOrder)
+  }
+
+  async statusActions(context: StoContext, id: string) {
+    const current = await this.db.workOrder.findUnique({ where: { id } })
+    if (!current) throw new AppError(404, 'NOT_FOUND', 'Work order not found')
+    requireCanReadWorkOrder(context, current)
+
+    const allowedStatuses = getAllowedWorkOrderStatusTargets(context, current)
+    return {
+      currentStatus: current.status,
+      allowedStatuses,
+      role: context.role,
+      canChangeStatus: allowedStatuses.length > 0,
+    }
   }
 
   async update(context: StoContext, id: string, input: UpdateWorkOrderInput) {

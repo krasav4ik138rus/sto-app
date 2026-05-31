@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  ChangeWorkOrderStatusInput,
   CreateAttachmentMetadataInput,
   CreateDiagnosticInput,
   CreateRecommendationInput,
@@ -28,6 +29,7 @@ export const stoQueryKeys = {
   attachments: (orderId: string, filters?: ListAttachmentsQuery) =>
     ['sto', 'orders', orderId, 'attachments', filters ? JSON.stringify(filters) : ''] as const,
   summary: (orderId: string) => ['sto', 'orders', orderId, 'summary'] as const,
+  orderStatusActions: (orderId: string) => ['sto', 'orders', orderId, 'status-actions'] as const,
   customers: (search?: string) => ['sto', 'customers', search ?? ''] as const,
   vehicles: (search?: string, customerId?: string | null) =>
     ['sto', 'vehicles', search ?? '', customerId ?? ''] as const,
@@ -247,8 +249,39 @@ export function useWorkOrderSummary(orderId: string | undefined) {
   });
 }
 
+export function useWorkOrderStatusActions(orderId: string | undefined) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: stoQueryKeys.orderStatusActions(orderId ?? ''),
+    enabled: auth.isAuthenticated && Boolean(orderId),
+    queryFn: () => auth.api.getWorkOrderStatusActions(orderId ?? ''),
+  });
+}
+
+export function useChangeWorkOrderStatus(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ChangeWorkOrderStatusInput) => auth.api.changeWorkOrderStatus(orderId, input),
+    onSuccess: async () => {
+      await invalidateWorkOrderStatusState(queryClient, orderId);
+    },
+  });
+}
+
 export function canCreateOrders(role: StaffRole | undefined) {
   return role === 'MASTER' || role === 'DIRECTOR' || role === 'ADMIN';
+}
+
+async function invalidateWorkOrderStatusState(queryClient: ReturnType<typeof useQueryClient>, orderId: string) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(orderId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.orderStatusActions(orderId) }),
+    queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
+  ]);
 }
 
 async function invalidateInspectionState(queryClient: ReturnType<typeof useQueryClient>, orderId: string) {
@@ -301,8 +334,10 @@ export function getApiErrorMessage(error: unknown) {
     if (error.code === 'STO_STAFF_PROFILE_REQUIRED') {
       return 'У пользователя нет профиля сотрудника СТО. Запусти seed или обратись к администратору.';
     }
+    if (error.status === 400) return error.message || 'Проверьте заполненные поля и попробуйте снова.';
     if (error.status === 401) return 'Сессия истекла. Войдите снова.';
     if (error.status === 403) return 'Недостаточно прав для этого действия.';
+    if (error.status === 404) return 'Запись не найдена. Обновите экран и попробуйте снова.';
     if (error.status === 409) return 'Конфликт данных. Проверь номер заказ-наряда.';
     return error.message;
   }

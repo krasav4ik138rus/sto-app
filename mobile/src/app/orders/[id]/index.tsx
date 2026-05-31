@@ -1,39 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { StaffRole, WorkOrderStatus } from '@autoservice-app/contracts';
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { WorkOrderStatusActionBar } from '@/components/sto/orders/WorkOrderStatusActionBar';
 import { InfoRow, StateBlock, StatusBadge } from '@/components/sto-ui';
 import { Button } from '@/components/ui/button';
 import { Typography } from '@/components/ui/typography';
 import { Screen } from '@/components/screen';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
-import { formatDateTime, getApiErrorMessage, stoQueryKeys, useStoMe, workOrderStatusLabels, workOrderStatuses } from '@/lib/sto';
+import { formatDateTime, getApiErrorMessage, stoQueryKeys, workOrderStatusLabels } from '@/lib/sto';
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const auth = useAuth();
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const stoMe = useStoMe();
   const order = useQuery({
     queryKey: stoQueryKeys.order(id),
     enabled: Boolean(id),
     queryFn: () => auth.api.getWorkOrder(id),
-  });
-
-  const changeStatus = useMutation({
-    mutationFn: (status: WorkOrderStatus) => auth.api.changeWorkOrderStatus(id, { status }),
-    onSuccess: async (updated) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(id) }),
-        queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(id) }),
-        queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
-      ]);
-      Alert.alert('Статус изменен', workOrderStatusLabels[updated.status]);
-    },
-    onError: (error) => Alert.alert('Статус не изменен', getApiErrorMessage(error)),
   });
 
   if (order.isPending) {
@@ -63,10 +48,6 @@ export default function OrderDetailScreen() {
             {data.number}
           </Typography>
           <Typography muted>{data.vehicle.brandModel}</Typography>
-          <InfoRow label="Итог" value={data.summary.grandTotal ? `${data.summary.grandTotal} ₽` : '—'} />
-          <InfoRow label="Проблем" value={data.summary.diagnosticProblemItems?.length ?? 0} />
-          <InfoRow label="Рекомендаций" value={data.summary.recommendationsCount} />
-          <InfoRow label="Файлов" value={data.summary.attachmentsCount} />
         </View>
         <StatusBadge status={data.status} />
       </View>
@@ -107,52 +88,27 @@ export default function OrderDetailScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Typography variant="h4" weight="700">
-          Сменить статус
-        </Typography>
-        <View style={styles.actions}>
-          {statusOptions(stoMe.data?.role).map((status) => (
-            <Button
-              key={status}
-              disabled={status === data.status || changeStatus.isPending}
-              loading={changeStatus.isPending && changeStatus.variables === status}
-              size="sm"
-              variant={status === data.status ? 'default' : 'outline'}
-              onPress={() => changeStatus.mutate(status)}>
-              {workOrderStatusLabels[status]}
-            </Button>
-          ))}
-        </View>
-      </View>
+      <WorkOrderStatusActionBar currentStatus={data.status} orderId={id} />
 
       <View style={styles.section}>
         <Typography variant="h4" weight="700">
           История статусов
         </Typography>
-        {data.statusHistory.map((history) => (
-          <View key={history.id} style={styles.historyRow}>
-            <Typography weight="700">{workOrderStatusLabels[history.toStatus]}</Typography>
-            <Typography muted variant="bodySm">
-              {formatDateTime(history.createdAt)} · {history.comment ?? 'Без комментария'}
-            </Typography>
-          </View>
-        ))}
+        {data.statusHistory.length > 0 ? (
+          data.statusHistory.map((history) => (
+            <View key={history.id} style={styles.historyRow}>
+              <Typography weight="700">{workOrderStatusLabels[history.toStatus]}</Typography>
+              <Typography muted variant="bodySm">
+                {formatDateTime(history.createdAt)} · {history.comment ?? 'Без комментария'}
+              </Typography>
+            </View>
+          ))
+        ) : (
+          <Typography muted>Истории статусов пока нет.</Typography>
+        )}
       </View>
     </Screen>
   );
-}
-
-function statusOptions(role: StaffRole | undefined) {
-  if (role === 'MECHANIC') {
-    return ['IN_PROGRESS', 'AWAITING_APPROVAL', 'CANCELLED'] as const;
-  }
-
-  if (role === 'MASTER') {
-    return ['OPEN', 'IN_PROGRESS', 'AWAITING_APPROVAL', 'APPROVED', 'CANCELLED'] as const;
-  }
-
-  return workOrderStatuses;
 }
 
 function actionLabel(

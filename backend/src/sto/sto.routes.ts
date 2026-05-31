@@ -188,6 +188,12 @@ export function createStoRoutes() {
     return c.json(await service.get(context, idParamsSchema.parse(c.req.param()).id), 200)
   })
 
+  routes.get('/orders/:id/status-actions', async (c) => {
+    const context = await getStoContext(c)
+    const service = new WorkOrdersService(c.get('prisma'))
+    return c.json(await service.statusActions(context, idParamsSchema.parse(c.req.param()).id), 200)
+  })
+
   routes.patch('/orders/:id', async (c) => {
     const context = await getStoContext(c)
     const body = await jsonBody(c)

@@ -13,6 +13,7 @@ import { RecommendationsSummaryCard } from '@/components/sto/summary/Recommendat
 import { SummaryActionsCard } from '@/components/sto/summary/SummaryActionsCard';
 import { SummaryHeaderCard } from '@/components/sto/summary/SummaryHeaderCard';
 import { TotalsCard } from '@/components/sto/summary/TotalsCard';
+import { WorkOrderStatusActionBar } from '@/components/sto/orders/WorkOrderStatusActionBar';
 import { InfoRow, StateBlock } from '@/components/sto-ui';
 import { Button } from '@/components/ui/button';
 import { Typography } from '@/components/ui/typography';
@@ -91,6 +92,7 @@ export default function SummaryScreen() {
       </View>
 
       <SummaryHeaderCard order={orderData} summary={summaryData} />
+      <WorkOrderStatusActionBar currentStatus={orderData.status} orderId={orderId} />
       <CustomerVehicleCard order={orderData} summary={summaryData} />
       <InspectionProblemsCard problems={summaryData.inspectionProblemItems ?? []} />
       <DiagnosticProblemsCard

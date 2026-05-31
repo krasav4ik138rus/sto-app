@@ -190,6 +190,13 @@ export const workOrderStatusHistorySchema = z.object({
   createdAt: dateTimeSchema,
 })
 
+export const workOrderStatusActionsSchema = z.object({
+  currentStatus: workOrderStatusSchema,
+  allowedStatuses: z.array(workOrderStatusSchema),
+  role: staffRoleSchema,
+  canChangeStatus: z.boolean(),
+})
+
 export const inspectionActSchema = z.object({
   id: idSchema,
   organizationId: idSchema,
@@ -596,6 +603,7 @@ export type WorkOrderDto = z.infer<typeof workOrderSchema>
 export type WorkOrderListItemDto = z.infer<typeof workOrderListItemSchema>
 export type WorkOrderDetailDto = z.infer<typeof workOrderDetailSchema>
 export type WorkOrderStatusHistoryDto = z.infer<typeof workOrderStatusHistorySchema>
+export type WorkOrderStatusActionsDto = z.infer<typeof workOrderStatusActionsSchema>
 export type InspectionActDto = z.infer<typeof inspectionActSchema>
 export type DiagnosticDto = z.infer<typeof diagnosticSchema>
 export type RecommendationDto = z.infer<typeof recommendationSchema>

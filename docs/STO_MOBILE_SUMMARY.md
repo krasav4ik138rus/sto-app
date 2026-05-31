@@ -29,12 +29,14 @@ The screen uses existing mobile API/hooks:
 
 - `GET /api/sto/orders/:id/summary`
 - `GET /api/sto/orders/:id`
+- `GET /api/sto/orders/:id/status-actions`
 - `GET /api/sto/orders/:id/attachments`
 - `useWorkOrderSummary(orderId)`
 - `useAttachments(orderId)`
+- `useWorkOrderStatusActions(orderId)`
 - `stoQueryKeys.summary(orderId)`
 
-The order detail status mutation now invalidates summary, order detail, and orders list.
+Status actions are rendered by the shared `WorkOrderStatusActionBar` component. It is used by both order detail and summary, and status changes invalidate summary, order detail, orders list, and status actions.
 
 ## Blocks
 

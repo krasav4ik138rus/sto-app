@@ -51,6 +51,7 @@ import {
   vehicleSchema,
   workOrderDetailSchema,
   workOrderListItemSchema,
+  workOrderStatusActionsSchema,
   workOrderSummarySchema,
   orderAttachmentSchema,
   type AuthResponse,
@@ -92,6 +93,7 @@ import {
   type VehicleDto,
   type WorkOrderDetailDto,
   type WorkOrderListItemDto,
+  type WorkOrderStatusActionsDto,
   type WorkOrderSummaryDto,
   type PushMutationResponse,
   type RefreshResponse,
@@ -358,6 +360,12 @@ export class ApiClient {
 
   getWorkOrder(id: string): Promise<WorkOrderDetailDto> {
     return this.request(`/api/sto/orders/${encodeURIComponent(id)}`, workOrderDetailSchema, {
+      auth: true,
+    });
+  }
+
+  getWorkOrderStatusActions(id: string): Promise<WorkOrderStatusActionsDto> {
+    return this.request(`/api/sto/orders/${encodeURIComponent(id)}/status-actions`, workOrderStatusActionsSchema, {
       auth: true,
     });
   }

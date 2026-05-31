@@ -9,16 +9,29 @@ type WorkOrderAccessRecord = {
   createdByStaffProfileId: string
 }
 
+type WorkOrderStatusAccessRecord = WorkOrderAccessRecord & {
+  status: WorkOrderStatus
+}
+
 const managerRoles = ['MASTER', 'DIRECTOR', 'ADMIN'] as const satisfies StaffRole[]
 const organizationWideRoles = ['DIRECTOR', 'ADMIN'] as const satisfies StaffRole[]
-const staffStatusRoles: readonly WorkOrderStatus[] = ['IN_PROGRESS', 'AWAITING_APPROVAL', 'CANCELLED']
-const masterStatusRoles: readonly WorkOrderStatus[] = [
+const allStatusTargets = [
+  'OPEN',
+  'IN_PROGRESS',
+  'AWAITING_APPROVAL',
+  'APPROVED',
+  'COMPLETED',
+  'CLOSED',
+  'CANCELLED',
+] as const satisfies readonly WorkOrderStatus[]
+const staffStatusTargets = ['IN_PROGRESS', 'AWAITING_APPROVAL', 'CANCELLED'] as const satisfies readonly WorkOrderStatus[]
+const masterStatusTargets = [
   'OPEN',
   'IN_PROGRESS',
   'AWAITING_APPROVAL',
   'APPROVED',
   'CANCELLED',
-]
+] as const satisfies readonly WorkOrderStatus[]
 
 export function requireStoRole(context: StoContext, roles: readonly StaffRole[]) {
   if (!roles.includes(context.role)) {
@@ -82,30 +95,40 @@ export function requireCanEditWorkOrder(context: StoContext, workOrder: WorkOrde
 
 export function canChangeWorkOrderStatus(
   context: StoContext,
-  workOrder: WorkOrderAccessRecord,
+  workOrder: WorkOrderStatusAccessRecord,
   nextStatus: WorkOrderStatus,
 ) {
-  if (!canReadWorkOrder(context, workOrder)) return false
+  return getAllowedWorkOrderStatusTargets(context, workOrder).includes(nextStatus)
+}
+
+export function getAllowedWorkOrderStatusTargets(
+  context: StoContext,
+  workOrder: WorkOrderStatusAccessRecord,
+) {
+  if (!canReadWorkOrder(context, workOrder)) return []
+
+  const withoutCurrent = (statuses: readonly WorkOrderStatus[]) =>
+    statuses.filter((status) => status !== workOrder.status)
 
   if (context.role === 'MECHANIC') {
-    return (
-      staffStatusRoles.includes(nextStatus) &&
-      (workOrder.createdByStaffProfileId === context.staffProfile.id ||
-        workOrder.responsibleStaffProfileId === context.staffProfile.id)
-    )
+    const isAssignedOrCreator =
+      workOrder.createdByStaffProfileId === context.staffProfile.id ||
+      workOrder.responsibleStaffProfileId === context.staffProfile.id
+    return isAssignedOrCreator ? withoutCurrent(staffStatusTargets) : []
   }
 
   if (context.role === 'MASTER') {
-    if (!masterStatusRoles.includes(nextStatus)) return false
-    return !context.staffProfile.serviceCenterId || workOrder.serviceCenterId === context.staffProfile.serviceCenterId
+    const isInServiceCenterScope =
+      !context.staffProfile.serviceCenterId || workOrder.serviceCenterId === context.staffProfile.serviceCenterId
+    return isInServiceCenterScope ? withoutCurrent(masterStatusTargets) : []
   }
 
-  return isOrganizationWideRole(context.role)
+  return isOrganizationWideRole(context.role) ? withoutCurrent(allStatusTargets) : []
 }
 
 export function requireCanChangeWorkOrderStatus(
   context: StoContext,
-  workOrder: WorkOrderAccessRecord,
+  workOrder: WorkOrderStatusAccessRecord,
   nextStatus: WorkOrderStatus,
 ) {
   if (!canChangeWorkOrderStatus(context, workOrder, nextStatus)) {
