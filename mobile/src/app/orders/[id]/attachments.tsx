@@ -1,4 +1,5 @@
 import type {
+  AttachmentContextType,
   AttachmentType,
   AttachmentVisibility,
   OrderAttachmentDto,
@@ -45,6 +46,15 @@ import {
 } from '@/lib/sto';
 
 const orderOnlyTargetId = 'order';
+type AttachmentContextFilter = AttachmentContextType | 'ALL' | 'DIAGNOSTIC_GROUP';
+
+const attachmentFilterOptions: Array<{ label: string; value: AttachmentContextFilter }> = [
+  { label: 'Все', value: 'ALL' },
+  { label: 'Заказ', value: 'ORDER' },
+  { label: 'Акт', value: 'INSPECTION_ACT' },
+  { label: 'Диагностика', value: 'DIAGNOSTIC_GROUP' },
+  { label: 'Рекомендации', value: 'RECOMMENDATION' },
+];
 
 export default function AttachmentsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -68,6 +78,7 @@ export default function AttachmentsScreen() {
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState<AttachmentVisibility>('INTERNAL');
   const [linkTargetId, setLinkTargetId] = useState(orderOnlyTargetId);
+  const [contextFilter, setContextFilter] = useState<AttachmentContextFilter>('ALL');
   const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
   const [selectedAttachment, setSelectedAttachment] = useState<OrderAttachmentDto | null>(null);
 
@@ -184,6 +195,11 @@ export default function AttachmentsScreen() {
           type: draft.type,
           visibility,
           caption: caption.trim() || null,
+          contextType: target.contextType,
+          contextSectionId: target.contextSectionId ?? null,
+          contextFieldId: target.contextFieldId ?? null,
+          contextSide: target.contextSide,
+          contextLabel: target.contextLabel ?? null,
           inspectionActId: target.inspectionActId ?? null,
           diagnosticId: target.diagnosticId ?? null,
           recommendationId: target.recommendationId ?? null,
@@ -278,6 +294,12 @@ export default function AttachmentsScreen() {
   }
 
   const items = attachments.data?.items ?? [];
+  const visibleItems =
+    contextFilter === 'ALL'
+      ? items
+      : contextFilter === 'DIAGNOSTIC_GROUP'
+        ? items.filter((attachment) => attachment.contextType === 'DIAGNOSTIC' || attachment.contextType === 'DIAGNOSTIC_ITEM')
+        : items.filter((attachment) => attachment.contextType === contextFilter);
 
   return (
     <Screen keyboardAvoiding scroll scrollViewProps={{ keyboardShouldPersistTaps: 'handled' }}>
@@ -328,13 +350,24 @@ export default function AttachmentsScreen() {
         <Typography variant="h4" weight="800">
           Список
         </Typography>
-        {items.length === 0 ? (
+        <View style={styles.filterRow}>
+          {attachmentFilterOptions.map((option) => (
+            <Button
+              key={option.value}
+              size="sm"
+              variant={contextFilter === option.value ? 'default' : 'outline'}
+              onPress={() => setContextFilter(option.value)}>
+              {option.label}
+            </Button>
+          ))}
+        </View>
+        {visibleItems.length === 0 ? (
           <StateBlock
             title="Файлов пока нет"
             description="Добавьте фото осмотра, видео или документ. Файл сохранится в локальном backend storage."
           />
         ) : (
-          items.map((attachment) => (
+          visibleItems.map((attachment) => (
             <AttachmentCard
               key={attachment.id}
               attachment={attachment}
@@ -508,6 +541,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     height: 420,
     width: '100%',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.one,
   },
   modalHeader: {
     alignItems: 'flex-start',

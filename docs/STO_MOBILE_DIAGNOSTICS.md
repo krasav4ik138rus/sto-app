@@ -123,6 +123,27 @@ The screen uses:
 
 If the order has diagnostics, the newest diagnostic by `createdAt` becomes active. If no diagnostic exists, the user starts a local draft and the first save creates the backend record. Later saves update that record.
 
+## Item Photos
+
+Problem statuses now support item-level photos.
+
+For each diagnostic item/side:
+
+- `not_ok` and `recommend_service` show `+ Фото`;
+- `ok` hides the add button by default;
+- existing photos still show as `Фото: N` with compact thumbnails.
+
+The photo upload uses:
+
+- `POST /api/sto/orders/:id/attachments/upload`
+- `contextType=DIAGNOSTIC_ITEM`
+- `contextSectionId=<diagnostic category id>`
+- `contextFieldId=<diagnostic item id>`
+- `contextSide=LEFT | RIGHT | NONE`
+- `contextLabel=<human readable item label>`
+
+If the current diagnostic has unsaved changes, the screen asks the user to save first so the photo is tied to a stable `diagnosticId`.
+
 ## Emulator Check
 
 Use Android emulator with:
@@ -151,7 +172,6 @@ Open an order, tap diagnostics, create or edit a diagnostic, set statuses and pr
 ## Not Implemented Yet
 
 - Recommendations UI.
-- Attachments/photo picker UI.
 - Summary UI.
 - Autosave/offline drafts.
 - Detailed multi-diagnostic picker.

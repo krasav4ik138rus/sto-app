@@ -105,6 +105,7 @@ The attachment card opens a preview modal.
 - Photos render from the local preview URI immediately after upload, then from the protected backend file endpoint.
 - Documents and videos show metadata now. A richer document/video viewer is deferred.
 - Protected photo preview uses the mobile auth header returned by `getAttachmentFileHeaders()`.
+- Diagnostic item photos include context fields and render labels like `Диагностика -> <contextLabel>`.
 
 ## Link Target
 
@@ -160,6 +161,5 @@ This local upload change itself does not add new native modules.
 - Backend-generated thumbnails.
 - Offline upload queue.
 - Customer-visible sharing flow.
-- Diagnostic item/side-level attachment schema.
 - PDF/report export.
 - Full document/video viewer.

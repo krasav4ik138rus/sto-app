@@ -1,5 +1,6 @@
 import { diagnosticTemplateV1 } from '@autoservice-app/contracts';
 import type { DiagnosticData, DiagnosticDto } from '@autoservice-app/contracts';
+import * as ImagePicker from 'expo-image-picker';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -13,6 +14,7 @@ import { Typography } from '@/components/ui/typography';
 import { Screen } from '@/components/screen';
 import { Spacing } from '@/constants/theme';
 import { ApiRequestError } from '@/lib/api';
+import { buildDiagnosticItemAttachmentContext, filenameFromUri } from '@/lib/attachments';
 import { useAuth } from '@/lib/auth';
 import {
   calculateDiagnosticProgress,
@@ -28,9 +30,12 @@ import {
   stoQueryKeys,
   useCreateDiagnostic,
   useDiagnostics,
+  useAttachments,
   useStoMe,
   useUpdateDiagnostic,
+  useUploadAttachmentFile,
 } from '@/lib/sto';
+import type { DiagnosticSideName } from '@/lib/diagnostic-form';
 
 export default function DiagnosticsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -45,6 +50,7 @@ export default function DiagnosticsScreen() {
   });
   const diagnostics = useDiagnostics(orderId);
   const activeDiagnostic = useMemo(() => newestDiagnostic(diagnostics.data?.items ?? []), [diagnostics.data?.items]);
+  const attachments = useAttachments(orderId);
   const [draft, setDraft] = useState<DiagnosticData | null>(null);
   const [activeDiagnosticId, setActiveDiagnosticId] = useState<string | null>(null);
   const [savedFingerprint, setSavedFingerprint] = useState('');
@@ -52,6 +58,7 @@ export default function DiagnosticsScreen() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const createDiagnostic = useCreateDiagnostic(orderId);
   const updateDiagnostic = useUpdateDiagnostic(activeDiagnosticId ?? undefined, orderId);
+  const uploadAttachment = useUploadAttachmentFile(orderId);
   const sourceDraft = useMemo(() => {
     if (!order.data || !diagnostics.isSuccess) return null;
     if (activeDiagnostic) return withDiagnosticTotals(activeDiagnostic.dataJson, diagnosticTemplateV1);
@@ -125,6 +132,87 @@ export default function DiagnosticsScreen() {
     }
   };
 
+  const handleAddDiagnosticPhoto = (input: {
+    categoryId: string;
+    item: (typeof diagnosticTemplateV1.categories)[number]['items'][number];
+    side: DiagnosticSideName;
+  }) => {
+    if (!activeDiagnosticId || hasUnsavedChanges) {
+      Alert.alert('Сначала сохраните диагностику', 'Фото можно привязать после сохранения текущих данных диагностики.');
+      return;
+    }
+
+    Alert.alert('Добавить фото', 'Выберите источник фото', [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Галерея',
+        onPress: () => {
+          void pickAndUploadDiagnosticPhoto(activeDiagnosticId, input, 'library');
+        },
+      },
+      {
+        text: 'Камера',
+        onPress: () => {
+          void pickAndUploadDiagnosticPhoto(activeDiagnosticId, input, 'camera');
+        },
+      },
+    ]);
+  };
+
+  const pickAndUploadDiagnosticPhoto = async (
+    diagnosticId: string,
+    input: {
+      categoryId: string;
+      item: (typeof diagnosticTemplateV1.categories)[number]['items'][number];
+      side: DiagnosticSideName;
+    },
+    source: 'camera' | 'library',
+  ) => {
+    const hasPermission =
+      source === 'camera'
+        ? await ensureCameraPermission()
+        : await ensureMediaLibraryPermission();
+    if (!hasPermission) return;
+
+    const result =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ allowsEditing: false, mediaTypes: ['images'], quality: 0.85 })
+        : await ImagePicker.launchImageLibraryAsync({
+            allowsMultipleSelection: false,
+            mediaTypes: ['images'],
+            quality: 0.85,
+          });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    if (!asset) return;
+
+    const context = buildDiagnosticItemAttachmentContext({
+      diagnosticId,
+      item: input.item,
+      side: input.side,
+    });
+
+    try {
+      await uploadAttachment.mutateAsync({
+        file: {
+          byteSize: asset.fileSize ?? null,
+          mimeType: asset.mimeType ?? 'image/jpeg',
+          name: asset.fileName ?? filenameFromUri(asset.uri, 'diagnostic-photo.jpg'),
+          uri: asset.uri,
+        },
+        metadata: {
+          ...context,
+          type: 'PHOTO',
+          visibility: 'INTERNAL',
+        },
+      });
+      Alert.alert('Фото загружено', 'Фото привязано к пункту диагностики.');
+    } catch (error) {
+      Alert.alert('Фото не загружено', getDiagnosticErrorMessage(error));
+    }
+  };
+
   const handleExit = () => {
     if (!hasUnsavedChanges) {
       router.replace(orderHref(orderId));
@@ -138,7 +226,7 @@ export default function DiagnosticsScreen() {
     ]);
   };
 
-  if (order.isPending || diagnostics.isPending || stoMe.isPending) {
+  if (order.isPending || diagnostics.isPending || attachments.isPending || stoMe.isPending) {
     return <StateBlock title="Загружаем диагностику" />;
   }
 
@@ -163,6 +251,19 @@ export default function DiagnosticsScreen() {
           description={getDiagnosticErrorMessage(diagnostics.error)}
           actionLabel="Повторить"
           onAction={() => void diagnostics.refetch()}
+        />
+      </Screen>
+    );
+  }
+
+  if (attachments.isError) {
+    return (
+      <Screen backButton="auto" backFallbackHref={orderHref(orderId)} centered>
+        <StateBlock
+          title="Фото диагностики не загрузились"
+          description={getDiagnosticErrorMessage(attachments.error)}
+          actionLabel="Повторить"
+          onAction={() => void attachments.refetch()}
         />
       </Screen>
     );
@@ -222,11 +323,16 @@ export default function DiagnosticsScreen() {
       </View>
 
       <DiagnosticForm
+        attachments={attachments.data?.items ?? []}
         template={diagnosticTemplateV1}
         data={draft}
+        diagnosticId={activeDiagnosticId}
         currentCategoryId={currentCategoryId}
+        fileHeaders={auth.api.getAttachmentFileHeaders()}
+        getAttachmentFileUrl={(attachmentId) => auth.api.getAttachmentFileUrl(attachmentId)}
         onChange={setDraft}
         onCategoryChange={setCurrentCategoryId}
+        onAddPhoto={handleAddDiagnosticPhoto}
       />
 
       <SaveBar
@@ -255,6 +361,20 @@ function getDiagnosticErrorMessage(error: unknown) {
   }
 
   return getApiErrorMessage(error);
+}
+
+async function ensureMediaLibraryPermission() {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (permission.granted) return true;
+  Alert.alert('Нет доступа к галерее', 'Разрешите доступ к фото в настройках устройства.');
+  return false;
+}
+
+async function ensureCameraPermission() {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (permission.granted) return true;
+  Alert.alert('Нет доступа к камере', 'Разрешите доступ к камере в настройках устройства.');
+  return false;
 }
 
 function orderHref(orderId: string) {

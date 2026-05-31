@@ -152,16 +152,22 @@ This smoke test uploads a real local file to `backend/.uploads/sto/...`, verifie
 ```powershell
 Invoke-RestMethod -Method Get -Uri "$baseUrl/api/sto/orders/$orderId/attachments" -Headers $headers
 
-$samplePath = Join-Path $env:TEMP "sto-upload-smoke.txt"
-Set-Content -Path $samplePath -Value "STO upload smoke" -Encoding UTF8
+$samplePath = Join-Path $env:TEMP "sto-upload-smoke.png"
+$pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+[IO.File]::WriteAllBytes($samplePath, [Convert]::FromBase64String($pngBase64))
 
 $uploadJson = curl.exe -s `
   -X POST "$baseUrl/api/sto/orders/$orderId/attachments/upload" `
   -H "Authorization: Bearer $($login.accessToken)" `
-  -F "file=@$samplePath;type=text/plain" `
-  -F "type=DOCUMENT" `
+  -F "file=@$samplePath;type=image/png" `
+  -F "type=PHOTO" `
   -F "visibility=INTERNAL" `
   -F "caption=Local backend upload smoke" `
+  -F "contextType=DIAGNOSTIC_ITEM" `
+  -F "contextSectionId=front_suspension" `
+  -F "contextFieldId=front_shock_absorber" `
+  -F "contextSide=LEFT" `
+  -F "contextLabel=Front shock absorber left" `
   -F "diagnosticId=$($diagnostic.id)" `
   -F "recommendationId=$($recommendation.id)"
 
@@ -170,14 +176,19 @@ $attachment.id
 $attachment.fileUrl
 $attachment.storageKey
 
-$downloadPath = Join-Path $env:TEMP "sto-upload-smoke-download.txt"
+Invoke-RestMethod `
+  -Method Get `
+  -Uri "$baseUrl/api/sto/orders/$orderId/attachments?diagnosticId=$($diagnostic.id)&contextType=DIAGNOSTIC_ITEM&contextFieldId=front_shock_absorber&contextSide=LEFT" `
+  -Headers $headers
+
+$downloadPath = Join-Path $env:TEMP "sto-upload-smoke-download.png"
 Invoke-WebRequest `
   -Method Get `
   -Uri "$baseUrl/api/sto/attachments/$($attachment.id)/file" `
   -Headers $authHeaders `
   -OutFile $downloadPath
 
-Get-Content $downloadPath
+Get-Item $downloadPath
 
 Invoke-RestMethod `
   -Method Delete `

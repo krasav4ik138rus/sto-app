@@ -258,6 +258,12 @@ export function toWorkOrderSummaryDto(workOrder: {
     recommendations.length > 0
       ? recommendationTotals
       : diagnosticTotals
+  const diagnosticProblemItems = diagnostics
+    .flatMap((diagnostic) => extractDiagnosticProblemItems(diagnostic.id, diagnostic.dataJson))
+    .map((item) => ({
+      ...item,
+      attachmentCount: countDiagnosticItemAttachments(workOrder.attachments, item),
+    }))
 
   return {
     workOrderId: workOrder.id,
@@ -279,9 +285,7 @@ export function toWorkOrderSummaryDto(workOrder: {
       : {}),
     ...(workOrder.vehicle ? { vehicle: toVehicleDto(workOrder.vehicle) } : {}),
     inspectionProblemItems: inspectionAct ? extractInspectionProblemItems(inspectionAct.dataJson) : [],
-    diagnosticProblemItems: diagnostics.flatMap((diagnostic) =>
-      extractDiagnosticProblemItems(diagnostic.id, diagnostic.dataJson),
-    ),
+    diagnosticProblemItems,
     recommendations,
   }
 }
@@ -370,6 +374,11 @@ export function toOrderAttachmentDto(attachment: {
   recommendationId: string | null
   type: OrderAttachmentDto['type']
   visibility: OrderAttachmentDto['visibility']
+  contextType: OrderAttachmentDto['contextType']
+  contextSectionId: string | null
+  contextFieldId: string | null
+  contextSide: OrderAttachmentDto['contextSide']
+  contextLabel: string | null
   storageKey: string
   fileUrl: string | null
   originalFilename: string | null
@@ -471,4 +480,34 @@ function moneyNumber(value: string | null) {
   if (!value) return 0
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+function countDiagnosticItemAttachments(
+  attachments: unknown[],
+  item: {
+    diagnosticId: string
+    fieldKey: string
+    side: 'none' | 'left' | 'right'
+  },
+) {
+  return attachments.filter((attachment) => {
+    if (!isRecord(attachment)) return false
+    if (attachment.deletedAt) return false
+    return (
+      attachment.diagnosticId === item.diagnosticId &&
+      attachment.contextType === 'DIAGNOSTIC_ITEM' &&
+      attachment.contextFieldId === item.fieldKey &&
+      attachment.contextSide === diagnosticProblemSideToContextSide(item.side)
+    )
+  }).length
+}
+
+function diagnosticProblemSideToContextSide(side: 'none' | 'left' | 'right') {
+  if (side === 'left') return 'LEFT'
+  if (side === 'right') return 'RIGHT'
+  return 'NONE'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }

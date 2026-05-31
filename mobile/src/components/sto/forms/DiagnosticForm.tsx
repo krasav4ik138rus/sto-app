@@ -1,4 +1,4 @@
-import type { DiagnosticData } from '@autoservice-app/contracts';
+import type { DiagnosticData, OrderAttachmentDto } from '@autoservice-app/contracts';
 import type { DiagnosticTemplate } from '@autoservice-app/contracts';
 import { StyleSheet, View } from 'react-native';
 
@@ -17,19 +17,33 @@ import { MultilineField } from './MultilineField';
 import { TextField } from './TextField';
 
 type DiagnosticFormProps = {
+  attachments?: OrderAttachmentDto[];
   template: DiagnosticTemplate;
   data: DiagnosticData;
+  diagnosticId?: string | null;
   currentCategoryId: string;
+  fileHeaders?: Record<string, string>;
+  getAttachmentFileUrl?: (attachmentId: string) => string;
   onChange: (data: DiagnosticData) => void;
   onCategoryChange: (categoryId: string) => void;
+  onAddPhoto?: (input: {
+    categoryId: string;
+    item: DiagnosticTemplate['categories'][number]['items'][number];
+    side: 'none' | 'left' | 'right';
+  }) => void;
 };
 
 export function DiagnosticForm({
+  attachments = [],
   template,
   data,
+  diagnosticId,
   currentCategoryId,
+  fileHeaders = {},
+  getAttachmentFileUrl,
   onChange,
   onCategoryChange,
+  onAddPhoto,
 }: DiagnosticFormProps) {
   const colors = useTheme();
   const category = template.categories.find((candidate) => candidate.id === currentCategoryId) ?? template.categories[0];
@@ -75,8 +89,13 @@ export function DiagnosticForm({
           {category.items.map((item) => (
             <View key={item.id} style={[styles.fieldCard, { borderColor: colors.backgroundElement }]}>
               <DiagnosticItemField
+                attachments={attachments}
                 data={data}
+                diagnosticId={diagnosticId}
+                fileHeaders={fileHeaders}
+                getAttachmentFileUrl={getAttachmentFileUrl}
                 item={item}
+                onAddPhoto={(side) => onAddPhoto?.({ categoryId: category.id, item, side })}
                 onChange={(nextData) => onChange(withDiagnosticTotals(nextData, template))}
               />
             </View>

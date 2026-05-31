@@ -1,4 +1,6 @@
 import {
+  attachmentContextSideSchema,
+  attachmentContextTypeSchema,
   attachmentTypeSchema,
   attachmentVisibilitySchema,
   changeWorkOrderStatusInputSchema,
@@ -56,6 +58,11 @@ const attachmentIdParamsSchema = z.object({
 
 const uploadAttachmentFormSchema = z.object({
   caption: z.string().trim().max(1000).nullable().optional(),
+  contextFieldId: z.string().trim().max(120).nullable().optional(),
+  contextLabel: z.string().trim().max(255).nullable().optional(),
+  contextSectionId: z.string().trim().max(120).nullable().optional(),
+  contextSide: attachmentContextSideSchema.optional(),
+  contextType: attachmentContextTypeSchema.optional(),
   diagnosticId: z.string().min(1).nullable().optional(),
   inspectionActId: z.string().min(1).nullable().optional(),
   recommendationId: z.string().min(1).nullable().optional(),
@@ -377,6 +384,11 @@ export function createStoRoutes() {
         idParamsSchema.parse(c.req.param()).id,
         uploadAttachmentFormSchema.parse({
           caption: nullableFormString(form, 'caption'),
+          contextFieldId: nullableFormString(form, 'contextFieldId'),
+          contextLabel: nullableFormString(form, 'contextLabel'),
+          contextSectionId: nullableFormString(form, 'contextSectionId'),
+          contextSide: formString(form, 'contextSide') ?? undefined,
+          contextType: formString(form, 'contextType') ?? undefined,
           diagnosticId: nullableFormString(form, 'diagnosticId'),
           inspectionActId: nullableFormString(form, 'inspectionActId'),
           recommendationId: nullableFormString(form, 'recommendationId'),

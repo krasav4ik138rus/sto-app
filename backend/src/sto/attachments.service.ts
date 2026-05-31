@@ -1,4 +1,10 @@
-import type { CreateAttachmentMetadataInput, ListAttachmentsQuery } from '@autoservice-app/contracts'
+import { diagnosticTemplateV1 } from '@autoservice-app/contracts'
+import type {
+  AttachmentContextSide,
+  AttachmentContextType,
+  CreateAttachmentMetadataInput,
+  ListAttachmentsQuery,
+} from '@autoservice-app/contracts'
 import { randomUUID } from 'node:crypto'
 
 import type { DbClient } from '../db'
@@ -20,7 +26,29 @@ const managerRoles = ['MASTER', 'DIRECTOR', 'ADMIN'] as const
 
 type UploadAttachmentInput = Pick<
   CreateAttachmentMetadataInput,
-  'caption' | 'diagnosticId' | 'inspectionActId' | 'recommendationId' | 'type' | 'visibility'
+  | 'caption'
+  | 'contextFieldId'
+  | 'contextLabel'
+  | 'contextSectionId'
+  | 'contextSide'
+  | 'contextType'
+  | 'diagnosticId'
+  | 'inspectionActId'
+  | 'recommendationId'
+  | 'type'
+  | 'visibility'
+>
+
+type AttachmentContextInput = Pick<
+  CreateAttachmentMetadataInput,
+  | 'contextFieldId'
+  | 'contextLabel'
+  | 'contextSectionId'
+  | 'contextSide'
+  | 'contextType'
+  | 'diagnosticId'
+  | 'inspectionActId'
+  | 'recommendationId'
 >
 
 export class AttachmentsService {
@@ -35,12 +63,19 @@ export class AttachmentsService {
         deletedAt: null,
         ...(query.type ? { type: Array.isArray(query.type) ? { in: query.type } : query.type } : {}),
         ...(query.visibility ? { visibility: query.visibility } : {}),
+        ...(query.contextType ? { contextType: query.contextType } : {}),
+        ...(query.diagnosticId ? { diagnosticId: query.diagnosticId } : {}),
+        ...(query.inspectionActId ? { inspectionActId: query.inspectionActId } : {}),
+        ...(query.recommendationId ? { recommendationId: query.recommendationId } : {}),
+        ...(query.contextFieldId ? { contextFieldId: query.contextFieldId } : {}),
+        ...(query.contextSide ? { contextSide: query.contextSide } : {}),
         ...(query.search
           ? {
               OR: [
                 { originalFilename: { contains: query.search } },
                 { caption: { contains: query.search } },
                 { storageKey: { contains: query.search } },
+                { contextLabel: { contains: query.search } },
               ],
             }
           : {}),
@@ -62,6 +97,7 @@ export class AttachmentsService {
       throw new AppError(400, 'BAD_REQUEST', 'Attachment workOrderId must match route work order')
     }
     await this.assertLinkedRecords(context, workOrderId, input)
+    const attachmentContext = normalizeAttachmentContext(input)
 
     const attachment = await this.db.orderAttachment.create({
       data: {
@@ -72,6 +108,7 @@ export class AttachmentsService {
         recommendationId: input.recommendationId ?? null,
         type: input.type,
         visibility: input.visibility ?? 'INTERNAL',
+        ...attachmentContext,
         storageKey: input.storageKey,
         fileUrl: input.fileUrl ?? null,
         originalFilename: input.originalFilename ?? null,
@@ -89,6 +126,7 @@ export class AttachmentsService {
   async upload(context: StoContext, workOrderId: string, input: UploadAttachmentInput, file: AttachmentUploadFile) {
     const workOrder = await this.getWorkOrderForAccess(context, workOrderId)
     await this.assertLinkedRecords(context, workOrderId, input)
+    const attachmentContext = normalizeAttachmentContext(input)
     validateUploadFile(file, input.type)
 
     const storageKey = createAttachmentStorageKey({
@@ -110,6 +148,7 @@ export class AttachmentsService {
           recommendationId: input.recommendationId ?? null,
           type: input.type,
           visibility: input.visibility ?? 'INTERNAL',
+          ...attachmentContext,
           storageKey,
           fileUrl: `/api/sto/attachments/${attachmentId}/file`,
           originalFilename: file.originalFilename,
@@ -122,6 +161,7 @@ export class AttachmentsService {
 
       await this.audit(context, attachment.id, 'attachment_uploaded', {
         ...input,
+        ...attachmentContext,
         byteSize: file.size,
         mimeType: file.mimeType,
         originalFilename: file.originalFilename,
@@ -236,6 +276,138 @@ function assertSameOrder(
 
 function isManager(role: StoContext['role']) {
   return managerRoles.some((candidate) => candidate === role)
+}
+
+function normalizeAttachmentContext(input: AttachmentContextInput): {
+  contextType: AttachmentContextType
+  contextSectionId: string | null
+  contextFieldId: string | null
+  contextSide: AttachmentContextSide
+  contextLabel: string | null
+} {
+  const contextType = input.contextType ?? inferContextType(input)
+  const contextSide = input.contextSide ?? 'NONE'
+
+  if (contextType === 'ORDER') {
+    assertContextSide(contextSide, ['NONE'], 'ORDER attachments must use contextSide NONE')
+    return {
+      contextType,
+      contextSectionId: input.contextSectionId ?? null,
+      contextFieldId: input.contextFieldId ?? null,
+      contextSide,
+      contextLabel: input.contextLabel ?? null,
+    }
+  }
+
+  if (contextType === 'INSPECTION_ACT') {
+    if (!input.inspectionActId) {
+      throw new AppError(400, 'BAD_REQUEST', 'INSPECTION_ACT attachments require inspectionActId')
+    }
+    assertContextSide(contextSide, ['NONE'], 'INSPECTION_ACT attachments must use contextSide NONE')
+    return {
+      contextType,
+      contextSectionId: input.contextSectionId ?? null,
+      contextFieldId: input.contextFieldId ?? null,
+      contextSide,
+      contextLabel: input.contextLabel ?? null,
+    }
+  }
+
+  if (contextType === 'INSPECTION_FIELD') {
+    if (!input.inspectionActId || !input.contextFieldId) {
+      throw new AppError(400, 'BAD_REQUEST', 'INSPECTION_FIELD attachments require inspectionActId and contextFieldId')
+    }
+    assertContextSide(contextSide, ['NONE'], 'INSPECTION_FIELD attachments must use contextSide NONE')
+    return {
+      contextType,
+      contextSectionId: input.contextSectionId ?? null,
+      contextFieldId: input.contextFieldId,
+      contextSide,
+      contextLabel: input.contextLabel ?? input.contextFieldId,
+    }
+  }
+
+  if (contextType === 'DIAGNOSTIC') {
+    if (!input.diagnosticId) {
+      throw new AppError(400, 'BAD_REQUEST', 'DIAGNOSTIC attachments require diagnosticId')
+    }
+    assertContextSide(contextSide, ['NONE'], 'DIAGNOSTIC attachments must use contextSide NONE')
+    return {
+      contextType,
+      contextSectionId: input.contextSectionId ?? null,
+      contextFieldId: input.contextFieldId ?? null,
+      contextSide,
+      contextLabel: input.contextLabel ?? null,
+    }
+  }
+
+  if (contextType === 'DIAGNOSTIC_ITEM') {
+    if (!input.diagnosticId || !input.contextFieldId) {
+      throw new AppError(400, 'BAD_REQUEST', 'DIAGNOSTIC_ITEM attachments require diagnosticId and contextFieldId')
+    }
+    const item = findDiagnosticTemplateItem(input.contextFieldId)
+    if (!item) {
+      throw new AppError(400, 'BAD_REQUEST', `Unknown diagnostic item: ${input.contextFieldId}`)
+    }
+    if (item.side === 'both') {
+      assertContextSide(contextSide, ['LEFT', 'RIGHT'], 'DIAGNOSTIC_ITEM attachments for side=both require LEFT or RIGHT')
+    } else {
+      assertContextSide(contextSide, ['NONE'], 'DIAGNOSTIC_ITEM attachments for side=none must use NONE')
+    }
+
+    return {
+      contextType,
+      contextSectionId: input.contextSectionId ?? item.category,
+      contextFieldId: item.id,
+      contextSide,
+      contextLabel: input.contextLabel ?? diagnosticItemContextLabel(item.label, contextSide),
+    }
+  }
+
+  if (!input.recommendationId) {
+    throw new AppError(400, 'BAD_REQUEST', 'RECOMMENDATION attachments require recommendationId')
+  }
+  assertContextSide(contextSide, ['NONE'], 'RECOMMENDATION attachments must use contextSide NONE')
+  return {
+    contextType,
+    contextSectionId: input.contextSectionId ?? null,
+    contextFieldId: input.contextFieldId ?? null,
+    contextSide,
+    contextLabel: input.contextLabel ?? null,
+  }
+}
+
+function inferContextType(input: AttachmentContextInput): AttachmentContextType {
+  if (input.recommendationId) return 'RECOMMENDATION'
+  if (input.contextFieldId && input.diagnosticId) return 'DIAGNOSTIC_ITEM'
+  if (input.diagnosticId) return 'DIAGNOSTIC'
+  if (input.contextFieldId && input.inspectionActId) return 'INSPECTION_FIELD'
+  if (input.inspectionActId) return 'INSPECTION_ACT'
+  return 'ORDER'
+}
+
+function findDiagnosticTemplateItem(fieldId: string) {
+  for (const category of diagnosticTemplateV1.categories) {
+    const item = category.items.find((candidate) => candidate.id === fieldId)
+    if (item) return item
+  }
+  return null
+}
+
+function diagnosticItemContextLabel(label: string, side: AttachmentContextSide) {
+  if (side === 'LEFT') return `${label} - левая сторона`
+  if (side === 'RIGHT') return `${label} - правая сторона`
+  return label
+}
+
+function assertContextSide(
+  side: AttachmentContextSide,
+  allowed: AttachmentContextSide[],
+  message: string,
+) {
+  if (!allowed.includes(side)) {
+    throw new AppError(400, 'BAD_REQUEST', message)
+  }
 }
 
 function toJsonPayload(payload: unknown): Prisma.InputJsonValue {

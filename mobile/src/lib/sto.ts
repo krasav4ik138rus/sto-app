@@ -3,6 +3,7 @@ import type {
   CreateAttachmentMetadataInput,
   CreateDiagnosticInput,
   CreateRecommendationInput,
+  ListAttachmentsQuery,
   PatchInspectionActInput,
   StaffRole,
   UpdateRecommendationInput,
@@ -24,7 +25,8 @@ export const stoQueryKeys = {
   diagnostics: (orderId: string) => ['sto', 'orders', orderId, 'diagnostics'] as const,
   diagnostic: (diagnosticId: string) => ['sto', 'diagnostics', diagnosticId] as const,
   recommendations: (orderId: string) => ['sto', 'orders', orderId, 'recommendations'] as const,
-  attachments: (orderId: string) => ['sto', 'orders', orderId, 'attachments'] as const,
+  attachments: (orderId: string, filters?: ListAttachmentsQuery) =>
+    ['sto', 'orders', orderId, 'attachments', filters ? JSON.stringify(filters) : ''] as const,
   summary: (orderId: string) => ['sto', 'orders', orderId, 'summary'] as const,
   customers: (search?: string) => ['sto', 'customers', search ?? ''] as const,
   vehicles: (search?: string, customerId?: string | null) =>
@@ -189,13 +191,13 @@ export function useUpdateRecommendation(orderId: string) {
   });
 }
 
-export function useAttachments(orderId: string | undefined) {
+export function useAttachments(orderId: string | undefined, filters: ListAttachmentsQuery = {}) {
   const auth = useAuth();
 
   return useQuery({
-    queryKey: stoQueryKeys.attachments(orderId ?? ''),
+    queryKey: stoQueryKeys.attachments(orderId ?? '', filters),
     enabled: auth.isAuthenticated && Boolean(orderId),
-    queryFn: () => auth.api.listAttachments(orderId ?? ''),
+    queryFn: () => auth.api.listAttachments(orderId ?? '', filters),
   });
 }
 

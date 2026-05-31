@@ -264,6 +264,25 @@ enum AttachmentVisibility {
   @@map("attachment_visibility")
 }
 
+enum AttachmentContextType {
+  ORDER
+  INSPECTION_ACT
+  INSPECTION_FIELD
+  DIAGNOSTIC
+  DIAGNOSTIC_ITEM
+  RECOMMENDATION
+
+  @@map("attachment_context_type")
+}
+
+enum AttachmentContextSide {
+  NONE
+  LEFT
+  RIGHT
+
+  @@map("attachment_context_side")
+}
+
 model Organization {
   id             String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
   name           String
@@ -528,6 +547,11 @@ model OrderAttachment {
   recommendationId        String?              @map("recommendation_id") @db.Uuid
   type                    AttachmentType
   visibility              AttachmentVisibility @default(INTERNAL)
+  contextType             AttachmentContextType @default(ORDER) @map("context_type")
+  contextSectionId        String?              @map("context_section_id")
+  contextFieldId          String?              @map("context_field_id")
+  contextSide             AttachmentContextSide @default(NONE) @map("context_side")
+  contextLabel            String?              @map("context_label")
   storageKey              String               @map("storage_key")
   fileUrl                 String?              @map("file_url")
   originalFilename        String?              @map("original_filename")
@@ -545,9 +569,13 @@ model OrderAttachment {
   createdByStaffProfile   StaffProfile         @relation("OrderAttachmentCreatedBy", fields: [createdByStaffProfileId], references: [id], onDelete: Restrict, map: "order_attachments_created_by_staff_profile_id_fkey")
 
   @@index([organizationId, createdAt], map: "order_attachments_organization_id_created_at_idx")
+  @@index([organizationId, contextType, createdAt], map: "order_attachments_organization_id_context_type_created_at_idx")
   @@index([workOrderId, createdAt], map: "order_attachments_work_order_id_created_at_idx")
+  @@index([workOrderId, contextType, createdAt], map: "order_attachments_work_order_id_context_type_created_at_idx")
   @@index([inspectionActId], map: "order_attachments_inspection_act_id_idx")
+  @@index([inspectionActId, contextFieldId], map: "order_attachments_inspection_act_id_context_field_id_idx")
   @@index([diagnosticId], map: "order_attachments_diagnostic_id_idx")
+  @@index([diagnosticId, contextFieldId, contextSide], map: "order_attachments_diag_item_side_idx")
   @@index([recommendationId], map: "order_attachments_recommendation_id_idx")
   @@index([createdByStaffProfileId], map: "order_attachments_created_by_staff_profile_id_idx")
   @@map("order_attachments")

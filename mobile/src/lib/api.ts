@@ -179,7 +179,17 @@ export type UploadAttachmentFileInput = {
   };
   metadata: Pick<
     CreateAttachmentMetadataInput,
-    'caption' | 'diagnosticId' | 'inspectionActId' | 'recommendationId' | 'type' | 'visibility'
+    | 'caption'
+    | 'contextFieldId'
+    | 'contextLabel'
+    | 'contextSectionId'
+    | 'contextSide'
+    | 'contextType'
+    | 'diagnosticId'
+    | 'inspectionActId'
+    | 'recommendationId'
+    | 'type'
+    | 'visibility'
   >;
 };
 
@@ -495,6 +505,11 @@ export class ApiClient {
     formData.append('type', input.metadata.type);
     formData.append('visibility', input.metadata.visibility ?? 'INTERNAL');
     appendNullableFormValue(formData, 'caption', input.metadata.caption);
+    appendNullableFormValue(formData, 'contextFieldId', input.metadata.contextFieldId);
+    appendNullableFormValue(formData, 'contextLabel', input.metadata.contextLabel);
+    appendNullableFormValue(formData, 'contextSectionId', input.metadata.contextSectionId);
+    appendNullableFormValue(formData, 'contextSide', input.metadata.contextSide);
+    appendNullableFormValue(formData, 'contextType', input.metadata.contextType);
     appendNullableFormValue(formData, 'diagnosticId', input.metadata.diagnosticId);
     appendNullableFormValue(formData, 'inspectionActId', input.metadata.inspectionActId);
     appendNullableFormValue(formData, 'recommendationId', input.metadata.recommendationId);

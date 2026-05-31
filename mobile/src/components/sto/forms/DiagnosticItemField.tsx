@@ -1,4 +1,4 @@
-import type { DiagnosticData } from '@autoservice-app/contracts';
+import type { DiagnosticData, OrderAttachmentDto } from '@autoservice-app/contracts';
 import type { DiagnosticItem } from '@autoservice-app/contracts';
 import { StyleSheet, View } from 'react-native';
 
@@ -13,16 +13,32 @@ import {
   sidesForItem,
   type DiagnosticSideName,
 } from '@/lib/diagnostic-form';
+import { getDiagnosticItemAttachments } from '@/lib/attachments';
+import { DiagnosticItemPhotoButton } from './DiagnosticItemPhotoButton';
 import { DiagnosticStatusField } from './DiagnosticStatusField';
 import { MoneyField } from './MoneyField';
 
 type DiagnosticItemFieldProps = {
+  attachments?: OrderAttachmentDto[];
   data: DiagnosticData;
+  diagnosticId?: string | null;
+  fileHeaders?: Record<string, string>;
+  getAttachmentFileUrl?: (attachmentId: string) => string;
   item: DiagnosticItem;
+  onAddPhoto?: (side: DiagnosticSideName) => void;
   onChange: (data: DiagnosticData) => void;
 };
 
-export function DiagnosticItemField({ data, item, onChange }: DiagnosticItemFieldProps) {
+export function DiagnosticItemField({
+  attachments = [],
+  data,
+  diagnosticId,
+  fileHeaders = {},
+  getAttachmentFileUrl,
+  item,
+  onAddPhoto,
+  onChange,
+}: DiagnosticItemFieldProps) {
   return (
     <View style={styles.wrapper}>
       <Typography variant="h4" weight="800">
@@ -33,8 +49,13 @@ export function DiagnosticItemField({ data, item, onChange }: DiagnosticItemFiel
           <DiagnosticSideBlock
             key={side}
             data={data}
+            diagnosticId={diagnosticId}
+            attachments={attachments}
+            fileHeaders={fileHeaders}
+            getAttachmentFileUrl={getAttachmentFileUrl}
             item={item}
             side={side}
+            onAddPhoto={() => onAddPhoto?.(side)}
             onChange={onChange}
           />
         ))}
@@ -45,17 +66,29 @@ export function DiagnosticItemField({ data, item, onChange }: DiagnosticItemFiel
 
 function DiagnosticSideBlock({
   data,
+  diagnosticId,
+  attachments,
+  fileHeaders,
+  getAttachmentFileUrl,
   item,
   side,
+  onAddPhoto,
   onChange,
 }: {
   data: DiagnosticData;
+  diagnosticId?: string | null;
+  attachments: OrderAttachmentDto[];
+  fileHeaders: Record<string, string>;
+  getAttachmentFileUrl?: (attachmentId: string) => string;
   item: DiagnosticItem;
   side: DiagnosticSideName;
+  onAddPhoto?: () => void;
   onChange: (data: DiagnosticData) => void;
 }) {
   const value = getDiagnosticSideValue(data, item, side);
   const showPrices = item.hasPrice && value.status !== null && value.status !== 'ok';
+  const sideAttachments = getDiagnosticItemAttachments(attachments, diagnosticId, item.id, side);
+  const showAddPhoto = value.status === 'not_ok' || value.status === 'recommend_service';
 
   return (
     <View style={styles.sideBlock}>
@@ -67,6 +100,13 @@ function DiagnosticSideBlock({
       <DiagnosticStatusField
         value={value.status}
         onChange={(status) => onChange(setDiagnosticSideStatus(data, item.id, side, status))}
+      />
+      <DiagnosticItemPhotoButton
+        attachments={sideAttachments}
+        fileHeaders={fileHeaders}
+        getFileUrl={getAttachmentFileUrl ?? (() => '')}
+        showAddButton={showAddPhoto}
+        onAddPhoto={() => onAddPhoto?.()}
       />
       {showPrices ? (
         <View style={styles.priceRow}>

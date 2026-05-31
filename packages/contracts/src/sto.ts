@@ -18,6 +18,17 @@ export const attachmentTypeSchema = z.enum(['PHOTO', 'DOCUMENT', 'VIDEO'])
 
 export const attachmentVisibilitySchema = z.enum(['INTERNAL', 'CUSTOMER_VISIBLE'])
 
+export const attachmentContextTypeSchema = z.enum([
+  'ORDER',
+  'INSPECTION_ACT',
+  'INSPECTION_FIELD',
+  'DIAGNOSTIC',
+  'DIAGNOSTIC_ITEM',
+  'RECOMMENDATION',
+])
+
+export const attachmentContextSideSchema = z.enum(['NONE', 'LEFT', 'RIGHT'])
+
 export const inspectionConditionSchema = z.enum(['ok', 'attention', 'urgent'])
 
 export const diagnosticStatusSchema = z.enum(['ok', 'not_ok', 'recommend_service'])
@@ -236,6 +247,11 @@ export const orderAttachmentSchema = z.object({
   recommendationId: nullableStringSchema,
   type: attachmentTypeSchema,
   visibility: attachmentVisibilitySchema,
+  contextType: attachmentContextTypeSchema,
+  contextSectionId: nullableStringSchema,
+  contextFieldId: nullableStringSchema,
+  contextSide: attachmentContextSideSchema,
+  contextLabel: nullableStringSchema,
   storageKey: z.string(),
   fileUrl: nullableStringSchema,
   originalFilename: nullableStringSchema,
@@ -298,6 +314,7 @@ export const workOrderSummarySchema = z.object({
         partsPrice: moneyOutputSchema,
         servicePrice: moneyOutputSchema,
         comment: nullableStringSchema,
+        attachmentCount: z.number().int().nonnegative().optional(),
       }),
     )
     .optional(),
@@ -428,6 +445,11 @@ export const createAttachmentMetadataInputSchema = z.object({
   recommendationId: idSchema.nullable().optional(),
   type: attachmentTypeSchema,
   visibility: attachmentVisibilitySchema.default('INTERNAL'),
+  contextType: attachmentContextTypeSchema.optional(),
+  contextSectionId: z.string().trim().max(120).nullable().optional(),
+  contextFieldId: z.string().trim().max(120).nullable().optional(),
+  contextSide: attachmentContextSideSchema.optional(),
+  contextLabel: z.string().trim().max(255).nullable().optional(),
   storageKey: z.string().trim().min(1).max(1024),
   fileUrl: z.string().trim().url().nullable().optional(),
   originalFilename: z.string().trim().max(255).nullable().optional(),
@@ -505,6 +527,12 @@ export const listAttachmentsQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(200).optional(),
   type: z.union([attachmentTypeSchema, z.array(attachmentTypeSchema)]).optional(),
   visibility: attachmentVisibilitySchema.optional(),
+  contextType: attachmentContextTypeSchema.optional(),
+  diagnosticId: idSchema.optional(),
+  inspectionActId: idSchema.optional(),
+  recommendationId: idSchema.optional(),
+  contextFieldId: z.string().trim().max(120).optional(),
+  contextSide: attachmentContextSideSchema.optional(),
   organizationId: idSchema.optional(),
   workOrderId: idSchema.optional(),
   sort: z.enum(['created_desc', 'created_asc']).optional(),
@@ -547,6 +575,8 @@ export type WorkOrderStatus = z.infer<typeof workOrderStatusSchema>
 export type RecommendationStatus = z.infer<typeof recommendationStatusSchema>
 export type AttachmentType = z.infer<typeof attachmentTypeSchema>
 export type AttachmentVisibility = z.infer<typeof attachmentVisibilitySchema>
+export type AttachmentContextType = z.infer<typeof attachmentContextTypeSchema>
+export type AttachmentContextSide = z.infer<typeof attachmentContextSideSchema>
 export type InspectionCondition = z.infer<typeof inspectionConditionSchema>
 export type DiagnosticStatus = z.infer<typeof diagnosticStatusSchema>
 export type StoFieldType = z.infer<typeof stoFieldTypeSchema>
