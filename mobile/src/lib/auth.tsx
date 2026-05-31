@@ -190,19 +190,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   const logout = useCallback(async () => {
-    await logoutWithPushCleanup({
+    const [storedExpoPushToken, knownExpoPushTokens, refreshToken] = await Promise.all([
+      getStoredExpoPushToken().catch(() => null),
+      getKnownExpoPushTokens().catch(() => []),
+      getStoredRefreshToken().catch(() => null),
+    ]);
+
+    setAccessToken(null);
+    queryClient.clear();
+    await clearStoredRefreshToken();
+
+    void logoutWithPushCleanup({
       api,
       clearPendingExpoPushTokenCleanup,
       clearStoredExpoPushToken,
       getKnownExpoPushTokens,
       getStoredExpoPushToken,
       getStoredRefreshToken,
+      knownExpoPushTokens,
+      refreshToken,
       setPendingExpoPushTokenCleanup,
+      storedExpoPushToken,
       unregisterStoredExpoPushToken,
-    });
-    setAccessToken(null);
-    await clearStoredRefreshToken();
-    queryClient.removeQueries({ queryKey: meQueryKey });
+    }).catch(() => undefined);
   }, [api, queryClient, setAccessToken]);
 
   const value = useMemo<AuthContextValue>(

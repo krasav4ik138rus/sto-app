@@ -9,7 +9,10 @@ type LogoutPushCleanupInput = {
   getKnownExpoPushTokens: () => Promise<string[]>;
   getStoredExpoPushToken: () => Promise<string | null>;
   getStoredRefreshToken: () => Promise<string | null>;
+  knownExpoPushTokens?: string[];
+  refreshToken?: string | null;
   setPendingExpoPushTokenCleanup: (expoPushToken: string) => Promise<void>;
+  storedExpoPushToken?: string | null;
   unregisterStoredExpoPushToken: (
     api: Pick<ApiClient, 'unregisterExpoPushToken'>,
     options?: { clearStoredOnFailure?: boolean; retryOnUnauthorized?: boolean },
@@ -17,11 +20,15 @@ type LogoutPushCleanupInput = {
 };
 
 export async function logoutWithPushCleanup(input: LogoutPushCleanupInput) {
-  const storedExpoPushToken = await input.getStoredExpoPushToken().catch(() => null);
-  const knownExpoPushTokens = await input.getKnownExpoPushTokens().catch(() =>
+  const storedExpoPushToken =
+    input.storedExpoPushToken !== undefined
+      ? input.storedExpoPushToken
+      : await input.getStoredExpoPushToken().catch(() => null);
+  const knownExpoPushTokens = input.knownExpoPushTokens ?? (await input.getKnownExpoPushTokens().catch(() =>
     storedExpoPushToken ? [storedExpoPushToken] : [],
-  );
-  const refreshToken = await input.getStoredRefreshToken().catch(() => null);
+  ));
+  const refreshToken =
+    input.refreshToken !== undefined ? input.refreshToken : await input.getStoredRefreshToken().catch(() => null);
 
   const accessCleanupSucceeded = await input
     .unregisterStoredExpoPushToken(input.api, {

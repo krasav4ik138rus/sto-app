@@ -90,7 +90,13 @@ export default function OrderDetailScreen() {
         <View style={styles.actions}>
           {['inspection', 'diagnostics', 'recommendations', 'attachments', 'summary'].map((route) => (
             <Button key={route} variant="outline" onPress={() => router.push(`/orders/${id}/${route}` as Href)}>
-              {actionLabel(route, data.inspectionAct !== null, data.diagnostics.length > 0, data.recommendations.length)}
+              {actionLabel(
+                route,
+                data.inspectionAct !== null,
+                data.diagnostics.length > 0,
+                data.recommendations.length,
+                data.attachments.length,
+              )}
             </Button>
           ))}
         </View>
@@ -134,7 +140,11 @@ export default function OrderDetailScreen() {
 
 function statusOptions(role: StaffRole | undefined) {
   if (role === 'MECHANIC') {
-    return ['IN_PROGRESS', 'AWAITING_APPROVAL'] as const;
+    return ['IN_PROGRESS', 'AWAITING_APPROVAL', 'CANCELLED'] as const;
+  }
+
+  if (role === 'MASTER') {
+    return ['OPEN', 'IN_PROGRESS', 'AWAITING_APPROVAL', 'APPROVED', 'CANCELLED'] as const;
   }
 
   return workOrderStatuses;
@@ -145,6 +155,7 @@ function actionLabel(
   inspectionCompleted: boolean,
   hasDiagnostics: boolean,
   recommendationsCount: number,
+  attachmentsCount: number,
 ) {
   switch (route) {
     case 'inspection':
@@ -154,7 +165,7 @@ function actionLabel(
     case 'recommendations':
       return recommendationsCount > 0 ? `Рекомендации: ${recommendationsCount}` : 'Рекомендаций нет';
     case 'attachments':
-      return 'Фото/файлы';
+      return attachmentsCount > 0 ? `Файлы: ${attachmentsCount}` : 'Фото/файлов нет';
     case 'summary':
       return 'Сводка';
     default:

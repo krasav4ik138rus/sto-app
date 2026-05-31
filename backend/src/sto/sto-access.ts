@@ -11,6 +11,14 @@ type WorkOrderAccessRecord = {
 
 const managerRoles = ['MASTER', 'DIRECTOR', 'ADMIN'] as const satisfies StaffRole[]
 const organizationWideRoles = ['DIRECTOR', 'ADMIN'] as const satisfies StaffRole[]
+const staffStatusRoles: readonly WorkOrderStatus[] = ['IN_PROGRESS', 'AWAITING_APPROVAL', 'CANCELLED']
+const masterStatusRoles: readonly WorkOrderStatus[] = [
+  'OPEN',
+  'IN_PROGRESS',
+  'AWAITING_APPROVAL',
+  'APPROVED',
+  'CANCELLED',
+]
 
 export function requireStoRole(context: StoContext, roles: readonly StaffRole[]) {
   if (!roles.includes(context.role)) {
@@ -81,13 +89,14 @@ export function canChangeWorkOrderStatus(
 
   if (context.role === 'MECHANIC') {
     return (
-      (nextStatus === 'IN_PROGRESS' || nextStatus === 'AWAITING_APPROVAL') &&
+      staffStatusRoles.includes(nextStatus) &&
       (workOrder.createdByStaffProfileId === context.staffProfile.id ||
         workOrder.responsibleStaffProfileId === context.staffProfile.id)
     )
   }
 
   if (context.role === 'MASTER') {
+    if (!masterStatusRoles.includes(nextStatus)) return false
     return !context.staffProfile.serviceCenterId || workOrder.serviceCenterId === context.staffProfile.serviceCenterId
   }
 

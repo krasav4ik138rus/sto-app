@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  CreateAttachmentMetadataInput,
   CreateDiagnosticInput,
   CreateRecommendationInput,
   PatchInspectionActInput,
@@ -22,6 +23,7 @@ export const stoQueryKeys = {
   diagnostics: (orderId: string) => ['sto', 'orders', orderId, 'diagnostics'] as const,
   diagnostic: (diagnosticId: string) => ['sto', 'diagnostics', diagnosticId] as const,
   recommendations: (orderId: string) => ['sto', 'orders', orderId, 'recommendations'] as const,
+  attachments: (orderId: string) => ['sto', 'orders', orderId, 'attachments'] as const,
   summary: (orderId: string) => ['sto', 'orders', orderId, 'summary'] as const,
   customers: (search?: string) => ['sto', 'customers', search ?? ''] as const,
   vehicles: (search?: string, customerId?: string | null) =>
@@ -186,6 +188,40 @@ export function useUpdateRecommendation(orderId: string) {
   });
 }
 
+export function useAttachments(orderId: string | undefined) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: stoQueryKeys.attachments(orderId ?? ''),
+    enabled: auth.isAuthenticated && Boolean(orderId),
+    queryFn: () => auth.api.listAttachments(orderId ?? ''),
+  });
+}
+
+export function useCreateAttachmentMetadata(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateAttachmentMetadataInput) => auth.api.createAttachmentMetadata(orderId, input),
+    onSuccess: async () => {
+      await invalidateAttachmentState(queryClient, orderId);
+    },
+  });
+}
+
+export function useDeleteAttachment(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (attachmentId: string) => auth.api.deleteAttachment(attachmentId),
+    onSuccess: async () => {
+      await invalidateAttachmentState(queryClient, orderId);
+    },
+  });
+}
+
 export function useWorkOrderSummary(orderId: string | undefined) {
   const auth = useAuth();
 
@@ -230,6 +266,15 @@ async function invalidateRecommendationState(
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.recommendations(orderId) }),
     queryClient.invalidateQueries({ queryKey: ['sto', 'recommendations', recommendationId] }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(orderId) }),
+    queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
+  ]);
+}
+
+async function invalidateAttachmentState(queryClient: ReturnType<typeof useQueryClient>, orderId: string) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: stoQueryKeys.attachments(orderId) }),
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(orderId) }),
     queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(orderId) }),
     queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
