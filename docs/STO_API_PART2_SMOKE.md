@@ -1,6 +1,6 @@
 # STO API Part 2 Smoke
 
-Quick PowerShell checks for inspection acts, diagnostics, recommendations, attachment metadata and order summaries.
+Quick PowerShell checks for inspection acts, diagnostics, recommendations, local attachment upload/download and order summaries.
 
 ## Seed And Login
 
@@ -21,6 +21,10 @@ $login = Invoke-RestMethod `
 $headers = @{
   Authorization = "Bearer $($login.accessToken)"
   "Content-Type" = "application/json"
+}
+
+$authHeaders = @{
+  Authorization = "Bearer $($login.accessToken)"
 }
 ```
 
@@ -141,14 +145,52 @@ Invoke-RestMethod `
   } | ConvertTo-Json -Depth 8)
 ```
 
-## Attachment Metadata
+## Attachment Upload
 
-This smoke test creates metadata only. It does not upload a real file.
+This smoke test uploads a real local file to `backend/.uploads/sto/...`, verifies protected download and then soft-deletes the attachment.
 
 ```powershell
 Invoke-RestMethod -Method Get -Uri "$baseUrl/api/sto/orders/$orderId/attachments" -Headers $headers
 
-$attachment = Invoke-RestMethod `
+$samplePath = Join-Path $env:TEMP "sto-upload-smoke.txt"
+Set-Content -Path $samplePath -Value "STO upload smoke" -Encoding UTF8
+
+$uploadJson = curl.exe -s `
+  -X POST "$baseUrl/api/sto/orders/$orderId/attachments/upload" `
+  -H "Authorization: Bearer $($login.accessToken)" `
+  -F "file=@$samplePath;type=text/plain" `
+  -F "type=DOCUMENT" `
+  -F "visibility=INTERNAL" `
+  -F "caption=Local backend upload smoke" `
+  -F "diagnosticId=$($diagnostic.id)" `
+  -F "recommendationId=$($recommendation.id)"
+
+$attachment = $uploadJson | ConvertFrom-Json
+$attachment.id
+$attachment.fileUrl
+$attachment.storageKey
+
+$downloadPath = Join-Path $env:TEMP "sto-upload-smoke-download.txt"
+Invoke-WebRequest `
+  -Method Get `
+  -Uri "$baseUrl/api/sto/attachments/$($attachment.id)/file" `
+  -Headers $authHeaders `
+  -OutFile $downloadPath
+
+Get-Content $downloadPath
+
+Invoke-RestMethod `
+  -Method Delete `
+  -Uri "$baseUrl/api/sto/attachments/$($attachment.id)" `
+  -Headers $headers
+```
+
+## Metadata-Only Fallback
+
+The old metadata-only endpoint remains available for dev checks, but the mobile app should use multipart upload.
+
+```powershell
+$metadataOnlyAttachment = Invoke-RestMethod `
   -Method Post `
   -Uri "$baseUrl/api/sto/orders/$orderId/attachments" `
   -Headers $headers `
@@ -166,7 +208,7 @@ $attachment = Invoke-RestMethod `
 
 Invoke-RestMethod `
   -Method Delete `
-  -Uri "$baseUrl/api/sto/attachments/$($attachment.id)" `
+  -Uri "$baseUrl/api/sto/attachments/$($metadataOnlyAttachment.id)" `
   -Headers $headers
 ```
 

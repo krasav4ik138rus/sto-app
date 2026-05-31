@@ -1,14 +1,15 @@
 import type {
   AttachmentType,
   AttachmentVisibility,
-  CreateAttachmentMetadataInput,
+  OrderAttachmentDto,
 } from '@autoservice-app/contracts';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Modal, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
 
 import { AddAttachmentPanel } from '@/components/sto/attachments/AddAttachmentPanel';
 import { AttachmentCard } from '@/components/sto/attachments/AttachmentCard';
@@ -18,9 +19,12 @@ import { Typography } from '@/components/ui/typography';
 import { Screen } from '@/components/screen';
 import { Spacing } from '@/constants/theme';
 import {
+  attachmentLinkLabel,
+  attachmentTypeLabels,
+  attachmentVisibilityLabels,
   diagnosticAttachmentLabel,
+  formatBytes,
   filenameFromUri,
-  generateDevStorageKey,
   recommendationAttachmentLabel,
   type AttachmentLinkTarget,
   type LocalAttachmentDraft,
@@ -32,12 +36,12 @@ import {
   getApiErrorMessage,
   stoQueryKeys,
   useAttachments,
-  useCreateAttachmentMetadata,
   useDeleteAttachment,
   useDiagnostics,
   useInspection,
   useRecommendations,
   useStoMe,
+  useUploadAttachmentFile,
 } from '@/lib/sto';
 
 const orderOnlyTargetId = 'order';
@@ -57,7 +61,7 @@ export default function AttachmentsScreen() {
   const inspection = useInspection(orderId);
   const diagnostics = useDiagnostics(orderId);
   const recommendations = useRecommendations(orderId);
-  const createAttachment = useCreateAttachmentMetadata(orderId);
+  const uploadAttachment = useUploadAttachmentFile(orderId);
   const deleteAttachment = useDeleteAttachment(orderId);
   const [isAdding, setIsAdding] = useState(false);
   const [draft, setDraft] = useState<LocalAttachmentDraft | null>(null);
@@ -65,6 +69,7 @@ export default function AttachmentsScreen() {
   const [visibility, setVisibility] = useState<AttachmentVisibility>('INTERNAL');
   const [linkTargetId, setLinkTargetId] = useState(orderOnlyTargetId);
   const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
+  const [selectedAttachment, setSelectedAttachment] = useState<OrderAttachmentDto | null>(null);
 
   const linkTargets = useMemo(
     () =>
@@ -167,34 +172,35 @@ export default function AttachmentsScreen() {
     }
 
     const target = linkTargets.find((item) => item.id === linkTargetId) ?? linkTargets[0];
-    const input: CreateAttachmentMetadataInput = {
-      type: draft.type,
-      visibility,
-      storageKey: generateDevStorageKey(orderId, draft.originalFilename),
-      fileUrl: null,
-      originalFilename: draft.originalFilename,
-      mimeType: draft.mimeType,
-      byteSize: draft.byteSize,
-      caption: caption.trim() || null,
-      inspectionActId: target.inspectionActId ?? null,
-      diagnosticId: target.diagnosticId ?? null,
-      recommendationId: target.recommendationId ?? null,
-    };
-
     try {
-      const saved = await createAttachment.mutateAsync(input);
+      const saved = await uploadAttachment.mutateAsync({
+        file: {
+          byteSize: draft.byteSize,
+          mimeType: draft.mimeType,
+          name: draft.originalFilename,
+          uri: draft.uri,
+        },
+        metadata: {
+          type: draft.type,
+          visibility,
+          caption: caption.trim() || null,
+          inspectionActId: target.inspectionActId ?? null,
+          diagnosticId: target.diagnosticId ?? null,
+          recommendationId: target.recommendationId ?? null,
+        },
+      });
       if (draft.type === 'PHOTO') {
         setLocalPreviews((current) => ({ ...current, [saved.id]: draft.uri }));
       }
       resetForm();
-      Alert.alert('Файл добавлен', 'Сохранена metadata-запись без загрузки файла в облако.');
+      Alert.alert('Файл загружен', 'Файл сохранен в local backend storage.');
     } catch (error) {
       Alert.alert('Файл не сохранен', getAttachmentErrorMessage(error));
     }
   };
 
   const handleDelete = (attachmentId: string) => {
-    Alert.alert('Удалить файл?', 'Metadata-запись будет помечена как удаленная.', [
+    Alert.alert('Удалить файл?', 'Файл будет помечен как удаленный и скрыт из заказа.', [
       { text: 'Отмена', style: 'cancel' },
       {
         text: 'Удалить',
@@ -302,7 +308,7 @@ export default function AttachmentsScreen() {
           draft={draft}
           linkTargetId={linkTargetId}
           linkTargets={linkTargets}
-          saving={createAttachment.isPending}
+          saving={uploadAttachment.isPending}
           visibility={visibility}
           onCancel={resetForm}
           onCaptionChange={setCaption}
@@ -325,7 +331,7 @@ export default function AttachmentsScreen() {
         {items.length === 0 ? (
           <StateBlock
             title="Файлов пока нет"
-            description="Добавьте фото осмотра, видео или документ. Сейчас сохраняется только metadata."
+            description="Добавьте фото осмотра, видео или документ. Файл сохранится в локальном backend storage."
           />
         ) : (
           items.map((attachment) => (
@@ -333,15 +339,82 @@ export default function AttachmentsScreen() {
               key={attachment.id}
               attachment={attachment}
               deleting={deleteAttachment.isPending && deleteAttachment.variables === attachment.id}
+              fileHeaders={auth.api.getAttachmentFileHeaders()}
+              fileUrl={auth.api.getAttachmentFileUrl(attachment.id)}
               previewUri={localPreviews[attachment.id]}
               role={stoMe.data?.role}
               staffProfileId={stoMe.data?.staffProfile.id}
               onDelete={() => handleDelete(attachment.id)}
+              onOpen={() => setSelectedAttachment(attachment)}
             />
           ))
         )}
       </View>
+
+      <AttachmentPreviewModal
+        attachment={selectedAttachment}
+        fileHeaders={auth.api.getAttachmentFileHeaders()}
+        fileUrl={selectedAttachment ? auth.api.getAttachmentFileUrl(selectedAttachment.id) : undefined}
+        previewUri={selectedAttachment ? localPreviews[selectedAttachment.id] : undefined}
+        onClose={() => setSelectedAttachment(null)}
+      />
     </Screen>
+  );
+}
+
+function AttachmentPreviewModal({
+  attachment,
+  fileHeaders,
+  fileUrl,
+  previewUri,
+  onClose,
+}: {
+  attachment: OrderAttachmentDto | null;
+  fileHeaders: Record<string, string>;
+  fileUrl?: string;
+  previewUri?: string;
+  onClose: () => void;
+}) {
+  if (!attachment) return null;
+
+  const title = attachment.caption || attachment.originalFilename || attachmentTypeLabels[attachment.type];
+  const imageUri = attachment.type === 'PHOTO' ? previewUri ?? fileUrl ?? attachment.fileUrl ?? undefined : undefined;
+
+  return (
+    <Modal animationType="slide" presentationStyle="pageSheet" visible onRequestClose={onClose}>
+      <Screen scroll>
+        <View style={styles.modalHeader}>
+          <View style={styles.titleBlock}>
+            <Typography variant="h3" weight="800">
+              {title}
+            </Typography>
+            <Typography muted>
+              {attachmentTypeLabels[attachment.type]} · {attachmentVisibilityLabels[attachment.visibility]}
+            </Typography>
+          </View>
+          <Button variant="outline" onPress={onClose}>
+            Закрыть
+          </Button>
+        </View>
+
+        {imageUri ? (
+          <Image contentFit="contain" source={{ headers: fileHeaders, uri: imageUri }} style={styles.fullPreview} />
+        ) : (
+          <StateBlock
+            title={attachmentTypeLabels[attachment.type]}
+            description="Файл сохранен в защищенном backend storage. Полноценный viewer для документов и видео будет добавлен позже."
+          />
+        )}
+
+        <View style={styles.metaGrid}>
+          <InfoRow label="Файл" value={attachment.originalFilename ?? '—'} />
+          <InfoRow label="MIME" value={attachment.mimeType ?? '—'} />
+          <InfoRow label="Размер" value={formatBytes(attachment.byteSize)} />
+          <InfoRow label="Связь" value={attachmentLinkLabel(attachment)} />
+          <InfoRow label="Создан" value={formatDateTime(attachment.createdAt)} />
+        </View>
+      </Screen>
+    </Modal>
   );
 }
 
@@ -429,6 +502,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
+  },
+  fullPreview: {
+    backgroundColor: '#111827',
+    borderRadius: 8,
+    height: 420,
+    width: '100%',
+  },
+  modalHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: Spacing.two,
+    justifyContent: 'space-between',
   },
   section: {
     gap: Spacing.two,

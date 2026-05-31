@@ -146,7 +146,7 @@ export function AddAttachmentPanel({
       </View>
 
       <Button disabled={!draft} loading={saving} onPress={onSubmit}>
-        Сохранить metadata
+        Загрузить файл
       </Button>
     </View>
   );

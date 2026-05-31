@@ -1,4 +1,5 @@
 import type { CreateAttachmentMetadataInput, ListAttachmentsQuery } from '@autoservice-app/contracts'
+import { randomUUID } from 'node:crypto'
 
 import type { DbClient } from '../db'
 import { Prisma } from '../generated/prisma/client'
@@ -6,8 +7,21 @@ import { AppError } from '../http/errors'
 import { requireCanReadWorkOrder } from './sto-access'
 import type { StoContext } from './sto-context'
 import { toOrderAttachmentDto } from './sto-mappers'
+import {
+  attachmentFileResponse,
+  createAttachmentStorageKey,
+  removeAttachmentFile,
+  type AttachmentUploadFile,
+  validateUploadFile,
+  writeAttachmentFile,
+} from './attachment-files'
 
 const managerRoles = ['MASTER', 'DIRECTOR', 'ADMIN'] as const
+
+type UploadAttachmentInput = Pick<
+  CreateAttachmentMetadataInput,
+  'caption' | 'diagnosticId' | 'inspectionActId' | 'recommendationId' | 'type' | 'visibility'
+>
 
 export class AttachmentsService {
   constructor(private readonly db: DbClient) {}
@@ -72,6 +86,54 @@ export class AttachmentsService {
     return toOrderAttachmentDto(attachment)
   }
 
+  async upload(context: StoContext, workOrderId: string, input: UploadAttachmentInput, file: AttachmentUploadFile) {
+    const workOrder = await this.getWorkOrderForAccess(context, workOrderId)
+    await this.assertLinkedRecords(context, workOrderId, input)
+    validateUploadFile(file, input.type)
+
+    const storageKey = createAttachmentStorageKey({
+      organizationId: workOrder.organizationId,
+      workOrderId,
+      originalFilename: file.originalFilename,
+    })
+    await writeAttachmentFile(storageKey, file.bytes)
+    const attachmentId = randomUUID()
+
+    try {
+      const attachment = await this.db.orderAttachment.create({
+        data: {
+          id: attachmentId,
+          organizationId: workOrder.organizationId,
+          workOrderId,
+          inspectionActId: input.inspectionActId ?? null,
+          diagnosticId: input.diagnosticId ?? null,
+          recommendationId: input.recommendationId ?? null,
+          type: input.type,
+          visibility: input.visibility ?? 'INTERNAL',
+          storageKey,
+          fileUrl: `/api/sto/attachments/${attachmentId}/file`,
+          originalFilename: file.originalFilename,
+          mimeType: file.mimeType,
+          byteSize: file.size,
+          caption: input.caption ?? null,
+          createdByStaffProfileId: context.staffProfile.id,
+        },
+      })
+
+      await this.audit(context, attachment.id, 'attachment_uploaded', {
+        ...input,
+        byteSize: file.size,
+        mimeType: file.mimeType,
+        originalFilename: file.originalFilename,
+        storageKey,
+      })
+      return toOrderAttachmentDto(attachment)
+    } catch (error) {
+      await removeAttachmentFile(storageKey)
+      throw error
+    }
+  }
+
   async delete(context: StoContext, attachmentId: string) {
     const current = await this.db.orderAttachment.findUnique({
       where: { id: attachmentId },
@@ -90,6 +152,21 @@ export class AttachmentsService {
 
     await this.audit(context, attachmentId, 'attachment_deleted', { attachmentId })
     return { ok: true as const }
+  }
+
+  async file(context: StoContext, attachmentId: string) {
+    const attachment = await this.db.orderAttachment.findUnique({
+      where: { id: attachmentId },
+      include: { workOrder: true },
+    })
+    if (!attachment || attachment.deletedAt) throw new AppError(404, 'NOT_FOUND', 'Attachment not found')
+    requireCanReadWorkOrder(context, attachment.workOrder)
+
+    return attachmentFileResponse({
+      filename: attachment.originalFilename,
+      mimeType: attachment.mimeType,
+      storageKey: attachment.storageKey,
+    })
   }
 
   private async getWorkOrderForAccess(context: StoContext, workOrderId: string) {

@@ -12,6 +12,7 @@ import type {
 } from '@autoservice-app/contracts';
 
 import { ApiRequestError } from './api';
+import type { UploadAttachmentFileInput } from './api';
 import { useAuth } from './auth';
 
 export const stoQueryKeys = {
@@ -204,6 +205,18 @@ export function useCreateAttachmentMetadata(orderId: string) {
 
   return useMutation({
     mutationFn: (input: CreateAttachmentMetadataInput) => auth.api.createAttachmentMetadata(orderId, input),
+    onSuccess: async () => {
+      await invalidateAttachmentState(queryClient, orderId);
+    },
+  });
+}
+
+export function useUploadAttachmentFile(orderId: string) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UploadAttachmentFileInput) => auth.api.uploadAttachmentFile(orderId, input),
     onSuccess: async () => {
       await invalidateAttachmentState(queryClient, orderId);
     },

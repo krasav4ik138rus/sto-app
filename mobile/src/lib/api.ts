@@ -118,7 +118,7 @@ type ApiClientOptions = {
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  body?: unknown;
+  body?: FormData | unknown;
   auth?: boolean;
   retryOnUnauthorized?: boolean;
 };
@@ -169,6 +169,19 @@ export type ServiceCentersListResponse = z.infer<typeof serviceCentersListRespon
 export type CustomersListResponse = z.infer<typeof customersListResponseSchema>;
 export type VehiclesListResponse = z.infer<typeof vehiclesListResponseSchema>;
 export type WorkOrdersListResponse = z.infer<typeof workOrdersListResponseSchema>;
+
+export type UploadAttachmentFileInput = {
+  file: {
+    byteSize?: number | null;
+    mimeType: string | null;
+    name: string;
+    uri: string;
+  };
+  metadata: Pick<
+    CreateAttachmentMetadataInput,
+    'caption' | 'diagnosticId' | 'inspectionActId' | 'recommendationId' | 'type' | 'visibility'
+  >;
+};
 
 export class ApiClient {
   private refreshPromise: Promise<RefreshResponse> | null = null;
@@ -472,6 +485,39 @@ export class ApiClient {
     });
   }
 
+  uploadAttachmentFile(orderId: string, input: UploadAttachmentFileInput): Promise<OrderAttachmentDto> {
+    const formData = new FormData();
+    formData.append('file', {
+      name: input.file.name,
+      type: input.file.mimeType ?? 'application/octet-stream',
+      uri: input.file.uri,
+    } as unknown as Blob);
+    formData.append('type', input.metadata.type);
+    formData.append('visibility', input.metadata.visibility ?? 'INTERNAL');
+    appendNullableFormValue(formData, 'caption', input.metadata.caption);
+    appendNullableFormValue(formData, 'diagnosticId', input.metadata.diagnosticId);
+    appendNullableFormValue(formData, 'inspectionActId', input.metadata.inspectionActId);
+    appendNullableFormValue(formData, 'recommendationId', input.metadata.recommendationId);
+
+    return this.request(`/api/sto/orders/${encodeURIComponent(orderId)}/attachments/upload`, orderAttachmentSchema, {
+      method: 'POST',
+      body: formData,
+      auth: true,
+    });
+  }
+
+  getAttachmentFileUrl(attachmentId: string) {
+    return `${apiBaseUrl}/api/sto/attachments/${encodeURIComponent(attachmentId)}/file`;
+  }
+
+  getAttachmentFileHeaders() {
+    const accessToken = this.options.getAccessToken();
+    return {
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      'X-Client-Platform': 'mobile',
+    };
+  }
+
   async deleteAttachment(attachmentId: string): Promise<boolean> {
     const response = await this.request(`/api/sto/attachments/${encodeURIComponent(attachmentId)}`, attachmentDeleteResponseSchema, {
       method: 'DELETE',
@@ -513,10 +559,13 @@ export class ApiClient {
   }
 
   private async rawRequest(path: string, options: RequestOptions): Promise<Response> {
+    const isFormData = options.body instanceof FormData;
+    const body =
+      options.body === undefined ? undefined : isFormData ? options.body : JSON.stringify(options.body);
     const response = await fetch(`${apiBaseUrl}${path}`, {
       method: options.method ?? 'GET',
       headers: this.headers(options),
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: body as BodyInit | null | undefined,
     });
 
     if (response.status === 401 && options.auth && options.retryOnUnauthorized !== false) {
@@ -561,11 +610,12 @@ export class ApiClient {
   }
 
   private headers(options: RequestOptions) {
+    const isFormData = options.body instanceof FormData;
     const headers = new Headers({
       'X-Client-Platform': 'mobile',
     });
 
-    if (options.body !== undefined) {
+    if (options.body !== undefined && !isFormData) {
       headers.set('Content-Type', 'application/json');
     }
 
@@ -609,4 +659,9 @@ function queryString(query: Record<string, unknown>) {
 
   const serialized = params.toString();
   return serialized ? `?${serialized}` : '';
+}
+
+function appendNullableFormValue(formData: FormData, key: string, value: unknown) {
+  if (value === undefined || value === null || value === '') return;
+  formData.append(key, String(value));
 }

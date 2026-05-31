@@ -1,6 +1,6 @@
 import type { OrderAttachmentDto, StaffRole } from '@autoservice-app/contracts';
 import { Image } from 'expo-image';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { InfoRow } from '@/components/sto-ui';
 import { Badge } from '@/components/ui/badge';
@@ -20,30 +20,47 @@ import { formatDateTime } from '@/lib/sto';
 type AttachmentCardProps = {
   attachment: OrderAttachmentDto;
   deleting?: boolean;
+  fileHeaders?: Record<string, string>;
+  fileUrl?: string;
   previewUri?: string;
   role: StaffRole | undefined;
   staffProfileId: string | undefined;
   onDelete: () => void;
+  onOpen: () => void;
 };
 
 export function AttachmentCard({
   attachment,
   deleting,
+  fileHeaders,
+  fileUrl,
   previewUri,
   role,
   staffProfileId,
   onDelete,
+  onOpen,
 }: AttachmentCardProps) {
   const colors = useTheme();
   const canDelete = canDeleteAttachment(attachment, role, staffProfileId);
-  const imageUri = attachment.type === 'PHOTO' ? previewUri ?? attachment.fileUrl ?? undefined : undefined;
+  const imageUri = attachment.type === 'PHOTO' ? previewUri ?? fileUrl ?? attachment.fileUrl ?? undefined : undefined;
+  const title = attachment.caption || attachment.originalFilename || attachmentTypeLabels[attachment.type];
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.backgroundElement }]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: colors.background,
+          borderColor: colors.backgroundElement,
+          opacity: pressed ? 0.72 : 1,
+        },
+      ]}>
       <View style={styles.header}>
         <View style={styles.previewBox}>
           {imageUri ? (
-            <Image contentFit="cover" source={{ uri: imageUri }} style={styles.previewImage} />
+            <Image contentFit="cover" source={{ headers: fileHeaders, uri: imageUri }} style={styles.previewImage} />
           ) : (
             <Typography align="center" variant="bodySm" weight="800">
               {attachmentTypeLabels[attachment.type]}
@@ -52,11 +69,11 @@ export function AttachmentCard({
         </View>
         <View style={styles.titleBlock}>
           <Typography variant="bodyLg" weight="800">
-            {attachment.caption || attachment.originalFilename || attachment.storageKey}
+            {title}
           </Typography>
           <View style={styles.badges}>
-            <Badge variant="outline">{attachmentTypeLabels[attachment.type]}</Badge>
-            <Badge variant="outline">{attachmentVisibilityLabels[attachment.visibility]}</Badge>
+            <Badge variant="outline">Тип: {attachmentTypeLabels[attachment.type]}</Badge>
+            <Badge variant="outline">Доступ: {attachmentVisibilityLabels[attachment.visibility]}</Badge>
           </View>
         </View>
       </View>
@@ -67,20 +84,29 @@ export function AttachmentCard({
         <InfoRow label="Размер" value={formatBytes(attachment.byteSize)} />
         <InfoRow label="Связь" value={attachmentLinkLabel(attachment)} />
         <InfoRow label="Создан" value={formatDateTime(attachment.createdAt)} />
-        <InfoRow label="Storage key" value={attachment.storageKey} />
       </View>
 
+      <View style={styles.actions}>
+        <Button size="sm" variant="outline" onPress={onOpen}>
+          Открыть
+        </Button>
       {canDelete ? (
         <Button loading={deleting} size="sm" variant="destructive" onPress={onDelete}>
           Удалить
         </Button>
       ) : null}
-    </View>
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   badges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
