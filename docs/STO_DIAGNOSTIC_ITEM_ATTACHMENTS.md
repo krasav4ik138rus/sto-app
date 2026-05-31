@@ -77,6 +77,6 @@ backend/.uploads/sto/...
 
 Cloud storage remains a later step.
 
-## Next Step
+## Summary Screen
 
-The backend summary now includes `attachmentCount` for diagnostic problem items. A future summary screen can use this to show photo evidence near each problem and later open/export the files.
+The mobile summary screen now uses `attachmentCount` and the attachments list to show photo evidence beside diagnostic problem items. Export/share remains a later step.

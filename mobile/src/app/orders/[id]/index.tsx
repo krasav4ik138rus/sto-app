@@ -28,6 +28,7 @@ export default function OrderDetailScreen() {
     onSuccess: async (updated) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: stoQueryKeys.order(id) }),
+        queryClient.invalidateQueries({ queryKey: stoQueryKeys.summary(id) }),
         queryClient.invalidateQueries({ queryKey: ['sto', 'orders'] }),
       ]);
       Alert.alert('Статус изменен', workOrderStatusLabels[updated.status]);
@@ -62,6 +63,10 @@ export default function OrderDetailScreen() {
             {data.number}
           </Typography>
           <Typography muted>{data.vehicle.brandModel}</Typography>
+          <InfoRow label="Итог" value={data.summary.grandTotal ? `${data.summary.grandTotal} ₽` : '—'} />
+          <InfoRow label="Проблем" value={data.summary.diagnosticProblemItems?.length ?? 0} />
+          <InfoRow label="Рекомендаций" value={data.summary.recommendationsCount} />
+          <InfoRow label="Файлов" value={data.summary.attachmentsCount} />
         </View>
         <StatusBadge status={data.status} />
       </View>

@@ -106,6 +106,7 @@ The attachment card opens a preview modal.
 - Documents and videos show metadata now. A richer document/video viewer is deferred.
 - Protected photo preview uses the mobile auth header returned by `getAttachmentFileHeaders()`.
 - Diagnostic item photos include context fields and render labels like `Диагностика -> <contextLabel>`.
+- The mobile summary screen reuses the protected file endpoint to show diagnostic photo evidence thumbnails.
 
 ## Link Target
 

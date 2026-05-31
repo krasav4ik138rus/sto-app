@@ -11,8 +11,8 @@ This step turns the post-auth mobile app into an STO working shell connected to 
 - `/orders/[id]/inspection`: working inspection act screen. See [STO Mobile Inspection](./STO_MOBILE_INSPECTION.md).
 - `/orders/[id]/diagnostics`: working diagnostics screen. See [STO Mobile Diagnostics](./STO_MOBILE_DIAGNOSTICS.md).
 - `/orders/[id]/recommendations`: working recommendations screen. See [STO Mobile Recommendations](./STO_MOBILE_RECOMMENDATIONS.md).
-- `/orders/[id]/attachments`: working metadata-only photo/file screen. See [STO Mobile Attachments](./STO_MOBILE_ATTACHMENTS.md).
-- `/orders/[id]/summary`: placeholder.
+- `/orders/[id]/attachments`: working local backend photo/file upload screen. See [STO Mobile Attachments](./STO_MOBILE_ATTACHMENTS.md).
+- `/orders/[id]/summary`: working mobile summary screen. See [STO Mobile Summary](./STO_MOBILE_SUMMARY.md).
 
 The component catalog remains in the codebase, but it is removed from the normal post-auth tab flow.
 
@@ -79,8 +79,8 @@ After login the app loads `GET /api/sto/me` through TanStack Query. The UI shows
 
 The following are intentionally placeholders after Part 2D:
 
-- Real cloud upload for photo/file bytes.
-- Summary UI.
+- Production cloud upload for photo/file bytes.
+- PDF/print/share from summary.
 - Admin staff management.
 - Director reporting.
 
